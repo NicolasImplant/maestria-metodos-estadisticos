@@ -1,0 +1,74 @@
+---
+title: "Actividad {{NUMBER}} — {{TITLE}}"
+subtitle: "Métodos Estadísticos Avanzados"
+author: "Juan Nicolás Patiño Rodríguez"
+date: last-modified
+lang: es
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: show
+    code-tools: true
+    theme: cosmo
+    df-print: paged
+execute:
+  echo: true
+  warning: false
+  message: false
+  freeze: auto
+knitr:
+  opts_chunk:
+    fig.width: 7
+    fig.height: 4.5
+    dpi: 150
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+options(box.path = normalizePath(here::here()))
+set.seed(2026)
+
+# styler: off
+box::use(
+  app/pipelines/summary_stats[numeric_summary],
+)
+# styler: on
+```
+
+## Contexto y objetivo
+
+Describe el problema y qué se busca resolver en esta actividad.
+
+## Datos
+
+Origen, variables y cualquier transformación previa. Los archivos crudos
+viven en `datos/` y **no** se versionan por defecto.
+
+## Metodología
+
+Justifica el método estadístico elegido y sus supuestos.
+
+## Desarrollo
+
+```{r}
+#| label: analisis
+# Reemplaza este bloque con el análisis real.
+numeric_summary(mtcars, c("mpg", "hp"))
+```
+
+## Resultados
+
+Presenta e interpreta los hallazgos.
+
+## Conclusiones
+
+Cierra con las conclusiones y limitaciones.
+
+## Referencias
+
+::: {#refs}
+:::

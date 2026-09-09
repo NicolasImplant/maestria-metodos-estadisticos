@@ -1,0 +1,89 @@
+---
+title: "Actividad 01 — Manejo de bases de datos en R"
+subtitle: "Métodos Estadísticos Avanzados"
+author: "Juan Nicolás Patiño Rodríguez"
+date: last-modified
+lang: es
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: show
+    code-tools: true
+    theme: cosmo
+    df-print: paged
+execute:
+  echo: true
+  warning: false
+  message: false
+  freeze: auto
+knitr:
+  opts_chunk:
+    fig.width: 7
+    fig.height: 4.5
+    dpi: 150
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+options(box.path = normalizePath(here::here()))
+set.seed(2026)
+
+# styler: off
+box::use(
+  app/core/factory[data_source_factory],
+  app/pipelines/summary_stats[numeric_summary],
+)
+# styler: on
+```
+
+## Contexto y objetivo
+
+Primera sesión del curso: importación, exploración y transformación
+reproducible de bases de datos en R usando Positron.
+
+## Datos
+
+Describe el origen y las variables. Coloca los archivos crudos en
+`datos/` (no versionados). Ejemplo de carga a través de la fábrica de
+orígenes de datos del proyecto:
+
+```{r}
+#| label: carga
+#| eval: false
+
+ruta <- here::here(
+  "actividades", "01-manejo-de-bases-de-datos", "datos", "base.csv"
+)
+src <- data_source_factory("csv", path = ruta)
+datos <- src$connect()$read()
+src$disconnect()
+```
+
+## Exploración inicial
+
+```{r}
+#| label: exploracion
+# Sustituye `mtcars` por `datos` cuando el archivo real esté disponible.
+numeric_summary(mtcars, c("mpg", "hp", "wt"))
+```
+
+## Transformaciones
+
+Documenta cada paso de limpieza y filtrado con funciones puras.
+
+## Resultados
+
+Presenta e interpreta los hallazgos.
+
+## Conclusiones
+
+Conclusiones y limitaciones.
+
+## Referencias
+
+::: {#refs}
+:::

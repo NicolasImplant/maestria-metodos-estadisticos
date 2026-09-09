@@ -1,0 +1,19 @@
+# Normalize line endings: LF in the repo, native on checkout.
+* text=auto eol=lf
+
+*.R      text
+*.Rmd    text
+*.qmd    text
+*.md     text
+*.yml    text
+*.yaml   text
+*.csv    text
+
+# Binary assets — never touch.
+*.png    binary
+*.jpg    binary
+*.pdf    binary
+*.xlsx   binary
+*.rds    binary
+*.RData  binary
+*.parquet binary

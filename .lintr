@@ -1,0 +1,27 @@
+# lintr configuration. See `Rscript scripts/check.R`.
+#
+# object_usage_linter is intentionally disabled: it runs static analysis that
+# does not understand `box::use()` imports and reports every imported symbol
+# as an undefined global. Unused-code detection is instead covered by
+# unused_import_linter plus code review.
+linters: linters_with_defaults(
+    line_length_linter(80L),
+    cyclocomp_linter(15L),
+    object_name_linter(styles = c("snake_case", "CamelCase")),
+    object_usage_linter = NULL,
+    assignment_linter(),
+    infix_spaces_linter(),
+    T_and_F_symbol_linter(),
+    seq_linter(),
+    vector_logic_linter(),
+    undesirable_function_linter(
+      fun = modify_defaults(default_undesirable_functions, options = NULL)
+    )
+  )
+encoding: "UTF-8"
+exclusions: list(
+    "renv",
+    "packrat",
+    "tests/testthat.R",
+    "actividades/_plantilla"
+  )

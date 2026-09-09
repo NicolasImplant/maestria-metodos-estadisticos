@@ -1,0 +1,26 @@
+# Project configuration. Read it with `config::get()` (package `config`).
+# Values here must never contain secrets; use environment variables for those.
+
+default:
+  project_name: "maestria-metodos-estadisticos"
+  course: "Métodos Estadísticos Avanzados"
+  locale: "es_CO"
+  paths:
+    activities: "actividades"
+    shared_code: "app"
+  report:
+    format: "html"
+    toc: true
+    number_sections: true
+    fig_width: 7
+    fig_height: 4.5
+  rng:
+    seed: 2026
+
+positron:
+  report:
+    format: "html"
+
+ci:
+  report:
+    format: "html"

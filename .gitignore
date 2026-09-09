@@ -1,0 +1,43 @@
+# --- R session / history ---
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+*.Rproj.user/
+.Rproj.user
+
+# --- R output / build ---
+*.utf8.md
+*.knit.md
+/*.tar.gz
+*.Rcheck/
+
+# --- renv: keep lockfile + activate.R, ignore the local library ---
+renv/library/
+renv/local/
+renv/cellar/
+renv/lock/
+renv/python/
+renv/sandbox/
+renv/staging/
+
+# --- Quarto ---
+/.quarto/
+**/_site/
+**/*_files/
+**/*.html
+!**/informe*.html
+/actividades/**/*.pdf
+
+# --- Data: raw inputs are not versioned by default ---
+# Track curated/derived data explicitly with `git add -f` when needed.
+actividades/**/datos/**
+!actividades/**/datos/.gitkeep
+!actividades/**/datos/README.md
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+*~
+.vscode/
+!.vscode/extensions.json

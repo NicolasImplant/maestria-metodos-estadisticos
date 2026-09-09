@@ -1,0 +1,37 @@
+Package: maestria.metodos.estadisticos
+Title: Soluciones de la Maestría — Métodos Estadísticos Avanzados
+Version: 0.1.0
+Authors@R:
+    person("Juan Nicolás", "Patiño Rodríguez",
+           email = "nicolasimplant@gmail.com",
+           role = c("aut", "cre"))
+Description: Working repository for the assignments of the "Advanced
+    Statistical Methods" course. It consolidates the analysis code and the
+    reproducible reports (Quarto) of every assignment, following a software
+    engineering standard for R: modular architecture with box, OOP with R6,
+    runtime contracts with checkmate, and quality control with lintr, styler,
+    roxygen2 and testthat. This is not a distributable package; the Package
+    field exists only so that renv and roxygen2 can discover dependencies.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Imports:
+    box,
+    checkmate,
+    R6
+Suggests:
+    config,
+    cyclocomp,
+    dplyr,
+    ggplot2,
+    here,
+    knitr,
+    lintr,
+    readr,
+    rmarkdown,
+    roxygen2,
+    styler,
+    testthat (>= 3.0.0),
+    tidyr
+Config/testthat/edition: 3

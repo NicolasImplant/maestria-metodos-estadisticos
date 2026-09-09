@@ -1,0 +1,14 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.claude$
+^\.github$
+^actividades$
+^scripts$
+^config$
+^renv$
+^renv\.lock$
+^\.lintr$
+^\.editorconfig$
+^LICENSE$
+^README\.md$
+^CLAUDE\.md$

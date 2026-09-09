@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(Rscript:*)",
+      "Bash(R CMD:*)",
+      "Bash(quarto render:*)",
+      "Bash(quarto check:*)",
+      "Bash(quarto preview:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git restore:*)",
+      "Bash(git stash:*)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(gh repo:*)",
+      "Bash(gh release:*)"
+    ]
+  }
+}
