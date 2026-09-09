@@ -28,6 +28,10 @@ curso):
 - **Calidad:** `testthat` (pruebas), `lintr` (análisis estático),
   `styler` (formato), `roxygen2` (documentación).
 
+El *por qué* de cada una de estas decisiones —qué aporta, qué beneficios da
+y cuál es su costo— está en
+[`docs/filosofia-r.md`](docs/filosofia-r.md).
+
 ## Estructura
 
 ```
