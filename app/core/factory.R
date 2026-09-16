@@ -27,6 +27,12 @@ box::use(
     box::use(app/services/csv_source[CsvSource])
     # styler: on
     CsvSource
+  },
+  sqlite = function() {
+    # styler: off
+    box::use(app/services/sqlite_source[SqliteSource])
+    # styler: on
+    SqliteSource
   }
 )
 
