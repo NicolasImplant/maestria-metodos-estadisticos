@@ -1,0 +1,120 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{enumitem}
+
+% Configuración de márgenes
+\geometry{top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm}
+
+% Definición de colores corporativos
+\definecolor{sabanaBlue}{HTML}{1b3a4b}
+\definecolor{darkGrey}{HTML}{2c3e50}
+\definecolor{accentGrey}{HTML}{7f8c8d}
+\definecolor{timeRed}{HTML}{c0392b}
+
+% Configuración de encabezado y pie de página
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\color{sabanaBlue}\bfseries S1 Métodos Estadísticos Avanzados}
+\rhead{\color{accentGrey}Juan Nicolás Patiño Rodríguez}
+\lfoot{\color{accentGrey}Guía del Exponente — Universidad de La Sabana}
+\rfoot{\color{sabanaBlue}\bfseries Página \thepage}
+
+% Títulos de sección personalizados
+\titleformat{\section}
+  {\color{sabanaBlue}\normalfont\large\bfseries}
+  {\thesection}{1em}{}
+
+\begin{document}
+
+% Portada / Cabecera limpia
+\begin{center}
+  {\fontsize{16}{20}\selectfont \color{sabanaBlue}\bfseries GUÍA DEL EXPONENTE: PRESENTACIÓN EN VIVO (MÁX. 150 SEGUNDOS)}\\[0.2cm]
+  {\fontsize{12}{15}\selectfont \color{darkGrey}\bfseries Unidad 2 — Impacto de Hábitos en el Rendimiento Académico}\\[0.1cm]
+  {\color{accentGrey}\itshape Juan Nicolás Patiño Rodríguez — Maestría en Inteligencia Artificial}\\[0.5cm]
+  \hrule
+\end{center}
+
+\vspace{0.3cm}
+
+\section*{Instrucciones de Dirección y Ritmo}
+\begin{itemize}[noitemsep,topsep=0pt]
+  \item \textbf{Límite de Tiempo Máximo:} 2.5 minutos (150 segundos) estrictos.
+  \item \textbf{Estilo de Locución:} Energético, riguroso, asertivo y directo al punto.
+  \item \textbf{Postura en Video:} Mirada directa a la cámara. Apóyate en esta guía como apuntes visuales fuera de cámara.
+\end{itemize}
+
+\hrule
+
+\vspace{0.5cm}
+
+% --- SLIDE 1 ---
+\noindent
+\textbf{\large Diapositiva 1: Introducción y Cohorte Común} \hfill \textcolor{timeRed}{\textbf{[0:00 - 0:20 | 20s]}}
+\begin{description}[noitemsep,topsep=2pt]
+  \item[Visual en Pantalla:] Título del informe, logotipos y resumen de la cohorte unificada de $N = 382$ estudiantes.
+  \item[Guion de Voz (Speech):] 
+    «Saludos cordiales. Hoy presento el análisis de rendimiento académico y estilo de vida de los estudiantes de la Universidad de La Sabana. Para este estudio de la Unidad 2, unificamos de manera determinista las bases de datos de matemáticas y lenguaje, logrando extraer una cohorte de 382 alumnos concurrentes.»
+\end{description}
+
+\vspace{0.4cm}
+
+% --- SLIDE 2 ---
+\noindent
+\textbf{\large Diapositiva 2: Rigor del Diseño Intra-Sujeto} \hfill \textcolor{timeRed}{\textbf{[0:20 - 0:45 | 25s]}}
+\begin{description}[noitemsep,topsep=2pt]
+  \item[Visual en Pantalla:] Diagrama del cruce determinista de 13 llaves y ventajas metodológicas del diseño intra-sujeto.
+  \item[Guion de Voz (Speech):]
+    «Al cruzar ambas asignaturas usando 13 llaves demográficas, establecemos un diseño intra-sujeto de alta robustez. Al evaluar a los mismos individuos en matemáticas y lenguaje, controlamos las variables sociodemográficas y familiares fijas, logrando aislar con total precisión el impacto de los hábitos individuales sobre el rendimiento cognitivo de la cohorte.»
+\end{description}
+
+\vspace{0.4cm}
+
+% --- SLIDE 3 ---
+\noindent
+\textbf{\large Diapositiva 3: Consistencia y Ancla de Alcohol} \hfill \textcolor{timeRed}{\textbf{[0:45 - 1:10 | 25s]}}
+\begin{description}[noitemsep,topsep=2pt]
+  \item[Visual en Pantalla:] \textit{correlacion\_cruzada.png} (Dispersión Jittered con línea de tendencia).
+  \item[Guion de Voz (Speech):]
+    «En la gráfica de dispersión vemos una clara consistencia lineal positiva: destacar en lenguaje predice el éxito en matemáticas. No obstante, al cruzar el consumo de alcohol los fines de semana, vemos un efecto de "anclaje cognitivo". Los estudiantes con consumos elevados (colores claros) se desplazan hacia el cuadrante de bajo desempeño, alejándose sistemáticamente de las notas sobresalientes.»
+\end{description}
+
+\vspace{0.4cm}
+
+% --- SLIDE 4 ---
+\noindent
+\textbf{\large Diapositiva 4: Efectos de Interacción de Género} \hfill \textcolor{timeRed}{\textbf{[1:10 - 1:30 | 20s]}}
+\begin{description}[noitemsep,topsep=2pt]
+  \item[Visual en Pantalla:] \textit{interaccion\_genero\_alcohol.png} (Curvas de medias interactivas de género vs alcohol).
+  \item[Guion de Voz (Speech):]
+    «Las curvas de interacción de medias exponen dinámicas fascinantes. En matemáticas, el consumo de nivel 5 desploma el rendimiento de ambos sexos. Sin embargo, en el área lingüística se revela un efecto de interacción cruzada: mientras que las mujeres toleran consumos moderados sin alteración, los hombres sufren un deterioro lineal y severo en sus notas a mayor consumo de alcohol.»
+\end{description}
+
+\vspace{0.4cm}
+
+% --- SLIDE 5 ---
+\noindent
+\textbf{\large Diapositiva 5: Análisis de Brecha Geográfica} \hfill \textcolor{timeRed}{\textbf{[1:30 - 1:45 | 15s]}}
+\begin{description}[noitemsep,topsep=2pt]
+  \item[Visual en Pantalla:] \textit{brecha\_urbano\_rural.png} (Violín y boxplots híbridos).
+  \item[Guion de Voz (Speech):]
+    «Al evaluar el entorno geográfico mediante gráficos híbridos, identificamos un rezago sistemático en el sector rural. Las medianas y modas de notas se desplazan a la izquierda. Esta brecha está estrechamente ligada a factores estructurales como el tiempo de viaje, limitando el descanso y el estudio autónomo frente a estudiantes urbanos.»
+\end{description}
+
+\vspace{0.4cm}
+
+% --- SLIDE 6 ---
+\noindent
+\textbf{\large Diapositiva 6: Conclusiones e Implicaciones de IA} \hfill \textcolor{timeRed}{\textbf{[1:45 - 2:30 | 45s]}}
+\begin{description}[noitemsep,topsep=2pt]
+  \item[Visual en Pantalla:] Conclusiones en viñetas (Hábitos de riesgo, brecha rural, implicaciones para predicción en IA).
+  \item[Guion de Voz (Speech):]
+    «Para concluir, el consumo de alcohol actúa como un ancla cognitiva destructiva, afectando de manera no lineal los dominios matemáticos y verbales según el género. Adicionalmente, la disparidad urbano-rural exige que los futuros modelos predictivos de deserción y rendimiento de Inteligencia Artificial incorporen variables de logística escolar, como el tiempo de transporte, para asegurar que las políticas públicas guiadas por datos sean justas y equitativas. Muchas gracias.»
+\end{description}
+
+\end{document}

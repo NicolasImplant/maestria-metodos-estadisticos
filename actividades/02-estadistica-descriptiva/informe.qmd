@@ -1,0 +1,344 @@
+---
+title: "Impacto del Estilo de Vida en el Rendimiento Académico: Análisis Descriptivo e Intra-Sujeto"
+subtitle: "S1 Métodos Estadísticos Avanzados — Unidad 2"
+author: "Juan Nicolás Patiño Rodríguez"
+institution: "Universidad de La Sabana — Maestría en Inteligencia Artificial"
+date: "2026-09-16"
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    number-sections: true
+    self-contained: true
+---
+
+```{r}
+#| label: setup
+#| include: false
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+# Reproducibilidad determinista (FR-6.2)
+set.seed(2026)
+
+# Configurar el box.path para poder usar las dependencias del proyecto raíz
+options(box.path = normalizePath(here::here()))
+
+# Importación modular limpia con box::use
+box::use(
+  knitr[kable],
+  R / solucion[
+    run_descriptive_pipeline,
+    generate_and_export_charts
+  ]
+)
+
+# Ejecutar el pipeline analítico utilizando la fuente SQLite (DIP en acción)
+res <- run_descriptive_pipeline(source_kind = "sqlite")
+
+# Exportar gráficos en PNG de alta resolución (300 DPI) para la presentación
+plots <- generate_and_export_charts(res$merged)
+
+# Helpers locales de lectura (solo para narrar el informe con números reales,
+# nunca hardcodeados, tomados directamente de las tablas del pipeline)
+get_num <- function(var, stat) {
+  round(res$numeric_summary[res$numeric_summary$variable == var, stat], 2)
+}
+get_pct <- function(var, value) {
+  row <- res$categorical_summary[
+    res$categorical_summary$variable == var &
+      res$categorical_summary$value == value,
+  ]
+  round(row$proportion * 100, 2)
+}
+```
+
+# Contexto y objetivo
+
+**Tema seleccionado:** Tema 3 de la guía de actividades — *"¿Influye nuestro
+estilo de vida en el rendimiento académico?"*
+
+**Pregunta de investigación:** ¿Cómo se relacionan el consumo de alcohol los
+fines de semana (`Walc`) y la zona de residencia (`address`) con el
+rendimiento académico (`G3`) y las inasistencias (`absences`) de estudiantes
+que cursan simultáneamente Matemáticas y Lengua Portuguesa, y qué tan variable
+es ese comportamiento entre géneros?
+
+**Objetivos:**
+
+* **Describir** el comportamiento de las calificaciones finales y las
+  inasistencias en ambas asignaturas, identificando valores atípicos mediante
+  un criterio estadístico formal (regla del rango intercuartílico).
+* **Comparar** el rendimiento académico entre estudiantes urbanos y rurales,
+  y entre niveles de consumo de alcohol y género, para determinar si existen
+  brechas sistemáticas de rendimiento.
+
+# Datos
+
+**Fuente:** *Student Performance Data Set* (UCI Machine Learning Repository),
+publicado originalmente por Cortez & Silva (2008) — ver [Referencias](#referencias).
+Contiene registros de estudiantes de dos escuelas secundarias portuguesas en
+las asignaturas de Matemáticas y Lengua Portuguesa.
+
+**Tamaño muestral:** el conjunto de Matemáticas y el de Lengua Portuguesa se
+cruzaron usando **13 llaves demográficas compartidas** (edad, sexo, dirección,
+tamaño y estado de convivencia familiar, educación y profesión de los padres,
+motivo de elección de escuela, acceso a guardería previa e internet),
+siguiendo el método `student-merge.R` documentado por los propios autores del
+dataset. Este cruce produjo una cohorte común de **N = `r nrow(res$merged)`
+estudiantes** que aparecen en ambos conjuntos.
+
+Es importante ser precisos sobre el alcance de este método: las 13 llaves son
+un **perfil demográfico compartido**, no un identificador único verificado. Es
+decir, dos estudiantes distintos con exactamente el mismo perfil (misma edad,
+sexo, dirección, educación de los padres, etc.) se fusionarían igual bajo este
+criterio, sin ser necesariamente la misma persona. Es la técnica estándar que
+acompaña al dataset y su uso está justificado, pero se reporta como lo que es:
+un *match* por atributos compartidos, no una identificación absoluta.
+
+# Metodología
+
+::: {.callout-note}
+## Resumen Arquitectónico (Mentalidad GDE & MVP)
+Este reporte se ejecuta sobre una arquitectura modular guiada por el **Principio
+de Inversión de Dependencias (DIP)**. Los datos analizados provienen de un
+servicio `SqliteSource` (R6) que implementa el contrato abstracto de
+`DataSource`. Toda aserción y tipado de datos fue validada en tiempo de
+ejecución de manera estricta utilizando la librería `checkmate`, garantizando la
+resiliencia del pipeline analítico.
+:::
+
+**Diseño intra-sujeto (within-subject):** analizar el rendimiento estudiantil
+de manera aislada en un solo curso induce sesgos de selección y omite la
+multidimensionalidad de la cognición humana. Al evaluar al mismo perfil de
+estudiantes bajo dos dominios cognitivos distintos —lógico-matemático
+(`G3.mat`) y verbal-lingüístico (`G3.por`)— se controlan naturalmente las
+variables sociodemográficas y familiares fijas que ese perfil comparte,
+permitiendo aislar con mayor claridad el efecto de los hábitos individuales
+(alcohol, zona de residencia) sobre el rendimiento cognitivo, con la salvedad
+metodológica señalada en la sección anterior.
+
+**Criterio formal de atípicos:** para las variables cuantitativas se aplica la
+regla de Tukey (rango intercuartílico): un valor se considera atípico si cae
+por debajo de $Q_1 - 1.5 \times \text{IQR}$ o por encima de
+$Q_3 + 1.5 \times \text{IQR}$. Este criterio, implementado en
+`app/pipelines/summary_stats.R::iqr_outliers()`, reemplaza cualquier
+afirmación puramente narrativa de "valores extremos" por un conteo y un
+límite numérico verificable (ver [Resultados](#resultados)).
+
+# Desarrollo
+
+## Análisis Descriptivo Cuantitativo
+
+```{r}
+#| label: tabla-cuantitativa
+#| echo: false
+kable(
+  res$numeric_summary,
+  col.names = c(
+    "Variable", "N Total", "Datos Faltantes", "Media", "Mediana",
+    "Moda (Det)", "Mínimo", "Máximo", "Desv. Estándar", "Varianza", "Rango"
+  ),
+  digits = 3,
+  caption = paste(
+    "Tabla 1. Estadísticas descriptivas de",
+    "variables cuantitativas clave"
+  )
+)
+```
+
+**Interpretación:**
+
+* **Edad (`age`):** la cohorte tiene una edad promedio de
+  `r get_num("age", "mean")` años (mediana `r get_num("age", "median")`), con
+  un rango de `r get_num("age", "range")` años entre el estudiante más joven
+  (`r get_num("age", "min")`) y el mayor (`r get_num("age", "max")`) — una
+  población relativamente homogénea en edad, como corresponde a estudiantes de
+  secundaria.
+* **Inasistencias (`absences`):** comportamiento marcadamente asimétrico. La
+  mediana de fallas en Matemáticas es `r get_num("absences.mat", "median")`
+  frente a `r get_num("absences.por", "median")` en Portugués, pero el máximo
+  en Matemáticas llega a `r get_num("absences.mat", "max")`, muy por encima de
+  la media (`r get_num("absences.mat", "mean")`). La sección
+  [Resultados](#resultados) formaliza esto con la regla IQR: exactamente
+  `r res$outliers_mat$n_outliers` observaciones superan el límite superior de
+  Tukey (`r round(res$outliers_mat$upper_bound, 1)`), con un coeficiente de
+  asimetría de `r round(res$outliers_mat$skewness, 2)` (positivo = cola
+  derecha), confirmando estadísticamente lo que la tabla solo insinúa.
+* **Calificaciones Finales (`G3`):** el rendimiento promedio es
+  sistemáticamente más alto en Lengua Portuguesa
+  ($\mu =$ `r get_num("G3.por", "mean")`) que en Matemáticas
+  ($\mu =$ `r get_num("G3.mat", "mean")`). La mediana y la moda coinciden en
+  Portugués (`r get_num("G3.por", "median")`), lo que indica una distribución
+  más simétrica y un nivel de aprobación generalizado más robusto que en
+  ciencias exactas.
+
+## Análisis Descriptivo Cualitativo
+
+```{r}
+#| label: tabla-cualitativa
+#| echo: false
+kable(
+  res$categorical_summary,
+  col.names = c(
+    "Variable", "Categoría / Valor",
+    "Frecuencia Absoluta", "Proporción"
+  ),
+  digits = 4,
+  caption = paste(
+    "Tabla 2. Distribución de frecuencias para",
+    "factores cualitativos de la cohorte"
+  )
+)
+```
+
+**Interpretación:**
+
+* **Sexo (`sex`):** la cohorte está compuesta por
+  `r get_pct("sex", "F")`% de mujeres y `r get_pct("sex", "M")`% de hombres —
+  una distribución razonablemente balanceada que permite comparar por género
+  sin que un grupo domine la muestra.
+* **Zona de residencia (`address`):** `r get_pct("address", "U")`% de los
+  estudiantes reside en zona urbana frente a `r get_pct("address", "R")`% en
+  zona rural. Esta proporción es relevante porque, como se ve en
+  [Resultados](#resultados), la brecha de rendimiento entre ambos grupos es
+  sistemática, no anecdótica.
+* **Consumo de Alcohol los Fines de Semana (`Walc.mat`):** el
+  `r get_pct("Walc.mat", "1")`% de los estudiantes reporta un consumo "Muy
+  bajo" (Nivel 1). No obstante, una proporción relevante de la cohorte se
+  ubica en niveles de consumo de moderado a muy alto, lo que justifica evaluar
+  su impacto en el rendimiento.
+* **Conectividad a Internet (`internet`):** el `r get_pct("internet", "yes")`%
+  de la cohorte cuenta con acceso a internet en su hogar, consolidando esta
+  herramienta tecnológica como la norma de estudio, aunque dejando a una
+  minoría en situación de vulnerabilidad digital.
+
+# Resultados
+
+### Consistencia Académica y el Consumo de Alcohol
+
+Para entender si las calificaciones de matemáticas y portugués se encuentran
+alineadas y cómo el consumo de alcohol altera esta relación, se diseñó un
+gráfico de dispersión cruzada con jittering para evitar el sobrelapamiento:
+
+```{r}
+#| label: grafico-correlacion
+#| fig-cap: "Figura 1. Notas Matemáticas vs Portugués y nivel de alcohol"
+#| echo: false
+plots$p1
+```
+
+**Interpretación:** existe una clara correlación positiva lineal entre ambas
+materias. Los estudiantes con calificaciones sobresalientes en portugués
+tienden a sobresalir en matemáticas. Sin embargo, al mapear el consumo de
+alcohol los fines de semana (puntos en tonos amarillos/verdes correspondientes
+a niveles 4 y 5), se observa que estos estudiantes se agrupan
+predominantemente en las bandas de rendimiento medio y bajo (calificaciones
+inferiores a 12), actuando el consumo de alcohol como una "ancla cognitiva"
+que limita el acceso a las bandas de excelencia académica.
+
+### Efecto de Interacción: Género, Hábitos y Calificaciones
+
+Para analizar si el consumo de alcohol afecta de manera diferenciada a hombres
+y mujeres, se desarrollaron curvas de interacción de medias:
+
+```{r}
+#| label: grafico-interaccion
+#| fig-cap: "Figura 2. Interacción de género, alcohol y calificaciones"
+#| echo: false
+plots$p2
+```
+
+**Interpretación:**
+
+* En **Matemáticas**, el rendimiento decae con el incremento del consumo de
+  alcohol en ambos géneros, pero se observa una pendiente negativa sumamente
+  pronunciada en los hombres que consumen niveles extremos (Nivel 5).
+* En **Portugués**, se detecta un **efecto de interacción cruzado**: mientras
+  que las mujeres mantienen un promedio relativamente estable en niveles de
+  consumo bajos y moderados, sufriendo una caída en el nivel 5, los hombres
+  muestran un deterioro sistemático y lineal en su rendimiento lingüístico a
+  medida que se incrementa el consumo recreativo de alcohol.
+
+### Análisis de Brecha Geográfica: Urbano vs. Rural
+
+Evaluamos la brecha de rendimiento asociada al área de residencia (`address`:
+"U" para urbano, "R" para rural):
+
+```{r}
+#| label: grafico-brecha
+#| fig-cap: "Figura 3. Distribuciones de notas finales por zona residencial"
+#| echo: false
+plots$p3
+```
+
+**Interpretación:** las distribuciones en formato de violín revelan una
+brecha socio-espacial evidente. Los estudiantes del sector rural ("R")
+muestran distribuciones con modas y medianas desplazadas hacia la izquierda
+(menores calificaciones) en ambas asignaturas. Esta disparidad está
+fuertemente correlacionada con factores logísticos y de infraestructura, como
+un mayor tiempo de viaje a la institución (`traveltime`), lo que reduce el
+tiempo neto disponible para el estudio autónomo y el descanso.
+
+### Detección Formal de Atípicos en Inasistencias (Milla Extra)
+
+La Tabla 1 insinuaba valores extremos en `absences`; aquí se aplica el
+criterio formal descrito en [Metodología](#metodología) y se visualizan los
+resultados sin ocultar los puntos atípicos (a diferencia del boxplot de la
+Figura 3, que los omite deliberadamente por claridad visual de la brecha
+geográfica):
+
+```{r}
+#| label: grafico-atipicos
+#| fig-cap: "Figura 4. Atípicos en inasistencias según la regla de Tukey (IQR)"
+#| echo: false
+plots$p4
+```
+
+**Interpretación:** aplicando $Q_3 + 1.5 \times \text{IQR}$ como límite
+superior (línea punteada), se identifican **`r res$outliers_mat$n_outliers`
+atípicos en Matemáticas** (límite = `r round(res$outliers_mat$upper_bound, 1)`
+inasistencias) y **`r res$outliers_por$n_outliers` en Portugués** (límite =
+`r round(res$outliers_por$upper_bound, 1)`). El coeficiente de asimetría
+correspondiente (`r round(res$outliers_mat$skewness, 2)` en Matemáticas,
+`r round(res$outliers_por$skewness, 2)` en Portugués) confirma una
+distribución con cola derecha pronunciada: la media de inasistencias está
+inflada por un pequeño grupo de estudiantes con ausentismo extremo, no por un
+comportamiento generalizado de la cohorte.
+
+# Conclusiones
+
+Retomando la pregunta de investigación —¿cómo se relacionan el alcohol y la
+zona de residencia con el rendimiento y las inasistencias, y qué tan variable
+es ese comportamiento entre géneros?—, el análisis descriptivo permite
+responder:
+
+1. **Hábitos vs. Rendimiento:** el consumo de alcohol los fines de semana se
+   asocia con un rendimiento más bajo en ambas asignaturas, con un efecto no
+   lineal: en Matemáticas la caída es fuerte en ambos géneros en el nivel más
+   alto de consumo, mientras que en Portugués el deterioro es marcadamente más
+   pronunciado y lineal en los hombres que en las mujeres.
+2. **Brecha de Oportunidades:** el sector rural presenta un rezago estructural
+   en calificaciones frente al urbano, consistente en ambas asignaturas y
+   asociado a factores logísticos (tiempo de viaje).
+3. **Inasistencias como señal, no como ruido:** las inasistencias no siguen un
+   comportamiento homogéneo — un subgrupo reducido de estudiantes (
+   `r res$outliers_mat$n_outliers` en Matemáticas) concentra ausentismo
+   extremo y distorsiona la media aritmética; cualquier análisis o modelo
+   posterior debería tratarlos como un segmento de riesgo diferenciado, no
+   descartarlos como ruido.
+
+Cualquier modelo predictivo de IA orientado a deserción escolar en este
+contexto debería incorporar `address`, `traveltime` y una bandera de
+ausentismo atípico (basada en la regla IQR aquí definida) como predictores
+clave de equidad social, complementando —no reemplazando— el análisis
+descriptivo presentado.
+
+# Referencias
+
+P. Cortez and A. Silva. *Using Data Mining to Predict Secondary School
+Student Performance*. In A. Brito and J. Teixeira (eds.), Proceedings of 5th
+FUBUTEC Conference, pp. 5–12, Porto, Portugal, 2008, EUROSIS. Dataset
+disponible públicamente como *Student Performance Data Set*, UCI Machine
+Learning Repository.
