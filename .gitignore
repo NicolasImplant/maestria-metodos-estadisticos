@@ -27,7 +27,16 @@ renv/staging/
 **/*_files/
 **/*.html
 !**/informe*.html
+!**/presentacion*.html
+!**/overlay_presentador.html
 /actividades/**/*.pdf
+
+# --- LaTeX intermediate files ---
+*.aux
+*.fls
+*.fdb_latexmk
+*.log
+*.synctex.gz
 
 # --- Data: raw inputs are not versioned by default ---
 # Track curated/derived data explicitly with `git add -f` when needed.

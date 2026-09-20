@@ -2329,7 +2329,7 @@ window.Quarto = {
   <li><a href="#consistencia-académica-y-el-consumo-de-alcohol" id="toc-consistencia-académica-y-el-consumo-de-alcohol" class="nav-link" data-scroll-target="#consistencia-académica-y-el-consumo-de-alcohol"><span class="header-section-number">5.0.1</span> Consistencia Académica y el Consumo de Alcohol</a></li>
   <li><a href="#efecto-de-interacción-género-hábitos-y-calificaciones" id="toc-efecto-de-interacción-género-hábitos-y-calificaciones" class="nav-link" data-scroll-target="#efecto-de-interacción-género-hábitos-y-calificaciones"><span class="header-section-number">5.0.2</span> Efecto de Interacción: Género, Hábitos y Calificaciones</a></li>
   <li><a href="#análisis-de-brecha-geográfica-urbano-vs.-rural" id="toc-análisis-de-brecha-geográfica-urbano-vs.-rural" class="nav-link" data-scroll-target="#análisis-de-brecha-geográfica-urbano-vs.-rural"><span class="header-section-number">5.0.3</span> Análisis de Brecha Geográfica: Urbano vs. Rural</a></li>
-  <li><a href="#detección-formal-de-atípicos-en-inasistencias-milla-extra" id="toc-detección-formal-de-atípicos-en-inasistencias-milla-extra" class="nav-link" data-scroll-target="#detección-formal-de-atípicos-en-inasistencias-milla-extra"><span class="header-section-number">5.0.4</span> Detección Formal de Atípicos en Inasistencias (Milla Extra)</a></li>
+  <li><a href="#detección-formal-de-atípicos-en-inasistencias" id="toc-detección-formal-de-atípicos-en-inasistencias" class="nav-link" data-scroll-target="#detección-formal-de-atípicos-en-inasistencias"><span class="header-section-number">5.0.4</span> Detección Formal de Atípicos en Inasistencias</a></li>
   </ul></li>
   <li><a href="#conclusiones" id="toc-conclusiones" class="nav-link" data-scroll-target="#conclusiones"><span class="header-section-number">6</span> Conclusiones</a></li>
   <li><a href="#referencias" id="toc-referencias" class="nav-link" data-scroll-target="#referencias"><span class="header-section-number">7</span> Referencias</a></li>
@@ -2394,11 +2394,11 @@ window.Quarto = {
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Note</span>Resumen Arquitectónico (Mentalidad GDE &amp; MVP)
+<span class="screen-reader-only">Note</span>Nota Metodológica sobre la Reproducibilidad del Pipeline de Datos
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Este reporte se ejecuta sobre una arquitectura modular guiada por el <strong>Principio de Inversión de Dependencias (DIP)</strong>. Los datos analizados provienen de un servicio <code>SqliteSource</code> (R6) que implementa el contrato abstracto de <code>DataSource</code>. Toda aserción y tipado de datos fue validada en tiempo de ejecución de manera estricta utilizando la librería <code>checkmate</code>, garantizando la resiliencia del pipeline analítico.</p>
+<p>Con el propósito de asegurar la reproducibilidad y el rigor científico del estudio, este reporte se ejecuta sobre una infraestructura analítica modular. La ingesta de datos emplea un servicio relacional <code>SqliteSource</code> que implementa un contrato abstracto de proveedor de datos. Todas las operaciones de limpieza, tipado de variables y cálculos estadísticos descriptivos fueron validados formalmente en tiempo de ejecución bajo aserciones de consistencia e integridad, garantizando la resiliencia de la cohorte analizada.</p>
 </div>
 </div>
 <p><strong>Diseño intra-sujeto (within-subject):</strong> analizar el rendimiento estudiantil de manera aislada en un solo curso induce sesgos de selección y omite la multidimensionalidad de la cognición humana. Al evaluar al mismo perfil de estudiantes bajo dos dominios cognitivos distintos —lógico-matemático (<code>G3.mat</code>) y verbal-lingüístico (<code>G3.por</code>)— se controlan naturalmente las variables sociodemográficas y familiares fijas que ese perfil comparte, permitiendo aislar con mayor claridad el efecto de los hábitos individuales (alcohol, zona de residencia) sobre el rendimiento cognitivo, con la salvedad metodológica señalada en la sección anterior.</p>
@@ -2665,8 +2665,8 @@ window.Quarto = {
 </div>
 <p><strong>Interpretación:</strong> las distribuciones en formato de violín revelan una brecha socio-espacial evidente. Los estudiantes del sector rural (“R”) muestran distribuciones con modas y medianas desplazadas hacia la izquierda (menores calificaciones) en ambas asignaturas. Esta disparidad está fuertemente correlacionada con factores logísticos y de infraestructura, como un mayor tiempo de viaje a la institución (<code>traveltime</code>), lo que reduce el tiempo neto disponible para el estudio autónomo y el descanso.</p>
 </section>
-<section id="detección-formal-de-atípicos-en-inasistencias-milla-extra" class="level3" data-number="5.0.4">
-<h3 data-number="5.0.4" class="anchored" data-anchor-id="detección-formal-de-atípicos-en-inasistencias-milla-extra"><span class="header-section-number">5.0.4</span> Detección Formal de Atípicos en Inasistencias (Milla Extra)</h3>
+<section id="detección-formal-de-atípicos-en-inasistencias" class="level3" data-number="5.0.4">
+<h3 data-number="5.0.4" class="anchored" data-anchor-id="detección-formal-de-atípicos-en-inasistencias"><span class="header-section-number">5.0.4</span> Detección Formal de Atípicos en Inasistencias</h3>
 <p>La Tabla 1 insinuaba valores extremos en <code>absences</code>; aquí se aplica el criterio formal descrito en <a href="#metodología">Metodología</a> y se visualizan los resultados sin ocultar los puntos atípicos (a diferencia del boxplot de la Figura 3, que los omite deliberadamente por claridad visual de la brecha geográfica):</p>
 <div class="cell">
 <div class="cell-output-display">

@@ -100,13 +100,14 @@ un *match* por atributos compartidos, no una identificación absoluta.
 # Metodología
 
 ::: {.callout-note}
-## Resumen Arquitectónico (Mentalidad GDE & MVP)
-Este reporte se ejecuta sobre una arquitectura modular guiada por el **Principio
-de Inversión de Dependencias (DIP)**. Los datos analizados provienen de un
-servicio `SqliteSource` (R6) que implementa el contrato abstracto de
-`DataSource`. Toda aserción y tipado de datos fue validada en tiempo de
-ejecución de manera estricta utilizando la librería `checkmate`, garantizando la
-resiliencia del pipeline analítico.
+## Nota Metodológica sobre la Reproducibilidad del Pipeline de Datos
+Con el propósito de asegurar la reproducibilidad y el rigor científico del
+estudio, este reporte se ejecuta sobre una infraestructura analítica modular.
+La ingesta de datos emplea un servicio relacional `SqliteSource` que
+implementa un contrato abstracto de proveedor de datos. Todas las operaciones
+de limpieza, tipado de variables y cálculos estadísticos descriptivos fueron
+validados formalmente en tiempo de ejecución bajo aserciones de consistencia
+e integridad, garantizando la resiliencia de la cohorte analizada.
 :::
 
 **Diseño intra-sujeto (within-subject):** analizar el rendimiento estudiantil
@@ -281,7 +282,7 @@ fuertemente correlacionada con factores logísticos y de infraestructura, como
 un mayor tiempo de viaje a la institución (`traveltime`), lo que reduce el
 tiempo neto disponible para el estudio autónomo y el descanso.
 
-### Detección Formal de Atípicos en Inasistencias (Milla Extra)
+### Detección Formal de Atípicos en Inasistencias
 
 La Tabla 1 insinuaba valores extremos en `absences`; aquí se aplica el
 criterio formal descrito en [Metodología](#metodología) y se visualizan los
