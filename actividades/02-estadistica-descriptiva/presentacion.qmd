@@ -142,23 +142,24 @@ Al cruzar ambas asignaturas usando 13 llaves demográficas, establecemos un dise
 
 :::: {.column width="44%"}
 ::: {.contrast-card}
-[Consistencia Inter-Asignatura]{.text-cyan style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
+[Consistencia Académica Dominante]{.text-cyan style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
 
-- Existe una clara **tendencia lineal positiva** entre ambas materias: destacar en Lengua se asocia fuertemente con la nota de Matemáticas.
+- **Fuerte asociación intra-sujeto ($r = 0.480$):** La competencia en lenguaje es el predictor más firme para matemáticas; las habilidades basales son transferibles.
 :::
 
 ::: {.contrast-card-accent}
-[Efecto Ancla Cognitivo]{.text-amber style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
+[Dispersión y Resiliencia]{.text-amber style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
 
-- **Concentración en notas bajas:** Consumo elevado de fin de semana ($\text{Walc} = 4, 5$, tonos claros) se ancla en el cuadrante inferior ($G3 < 10$).
-- **Techo de excelencia:** Prácticamente ningún estudiante con alto consumo de alcohol alcanza notas de honor ($G3 \ge 15$).
+- **Correlación débil y dispar:** La relación con el alcohol es casi nula en Matemáticas ($r = -0.027$) y moderada/baja en Portugués ($r = -0.227$).
+- **Casos resilientes:** De 76 estudiantes con consumo alto ($\text{Walc} \ge 4$), **15 obtienen notas notables o sobresalientes ($G3 \ge 14$)**.
+- **Criterio analítico:** El alcohol no impone un determinismo absoluto; coexiste con alta variabilidad individual.
 :::
 ::::
 
 :::::
 
 ::: {.notes}
-En la gráfica de dispersión hay una clara consistencia lineal: destacar en lenguaje se asocia con el éxito en matemáticas. Sin embargo, al cruzar el consumo de alcohol los fines de semana, aparece un efecto de anclaje cognitivo: los estudiantes con consumos elevados, en colores claros, se concentran en el cuadrante de bajo desempeño.
+En la correlación cruzada vemos que la habilidad lingüística y matemática se asocian positivamente con r igual a cero coma cuarenta y ocho. Sin embargo, el consumo de alcohol no actúa como un determinante absoluto: en matemáticas la correlación es prácticamente nula y quince estudiantes con alto consumo logran notas sobresalientes, evidenciando resiliencia individual.
 :::
 
 ---
@@ -168,7 +169,7 @@ En la gráfica de dispersión hay una clara consistencia lineal: destacar en len
 <div class="meta-bar">
   [\[1:14 - 1:36 | 22s\]]{.time-badge}
   [Análisis Bifactorial de Medias]{.tag-badge}
-  [Divergencia por Sexo]{.tag-badge}
+  [Estratos Balanceados (±1 SE)]{.tag-badge}
 </div>
 
 ::::: {.columns}
@@ -181,24 +182,24 @@ En la gráfica de dispersión hay una clara consistencia lineal: destacar en len
 
 :::: {.column width="44%"}
 ::: {.contrast-card}
-[Matemáticas ($G3_{\text{mat}}$)]{.text-cyan style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
+[Estratos Balanceados y Control Muestral]{.text-cyan style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
 
-- El consumo severo (nivel 5) reduce drásticamente el desempeño en ambos sexos, convergiendo a notas mínimas.
+- **Corrección de sesgo:** Agrupar en Bajo (1-2), Moderado (3) y Alto (4-5) neutraliza el artefacto de celdas unitarias (en $\text{Walc}=5$ solo había 4 mujeres vs 23 varones).
+- **Desbalance de género:** El 91% de mujeres se ubica en consumo bajo/moderado; el consumo alto es predominantemente masculino ($n=58$ vs $n=18$).
 :::
 
 ::: {.contrast-card-accent}
-[Lengua Portuguesa ($G3_{\text{por}}$)]{.text-amber style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
+[Divergencia por Asignatura]{.text-amber style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
 
-- **Hombres (azul):** Caída lineal, monótona y pronunciada a medida que se incrementa el consumo de alcohol.
-- **Mujeres (rojo):** Mayor resiliencia en consumos moderados (niveles 2-3), con un patrón asimétrico frente al masculino.
-- **Hallazgo:** El riesgo no afecta igual a todos; el género modula la respuesta según la materia evaluada.
+- **Portugués:** En consumo bajo ambos sexos igualan en $\sim 13.0$. Al subir el consumo, los hombres caen a $10.84$, mientras las mujeres preservan su media ($12.8 - 13.5$).
+- **Matemáticas:** Las barras de error ($\pm 1\,\text{SE}$) se solapan ampliamente en mujeres, confirmando que el hábito no explica variación estadísticamente significativa en esta área.
 :::
 ::::
 
 :::::
 
 ::: {.notes}
-Las curvas de interacción muestran dinámicas distintas por materia. En matemáticas, el consumo de nivel cinco reduce el rendimiento de ambos sexos. En el área lingüística el efecto se cruza: las mujeres toleran consumos moderados, mientras los hombres sufren un deterioro lineal y severo.
+Al agrupar el alcohol en tres estratos balanceados y calcular barras de error estándar, corregimos el artefacto de celdas pequeñas donde solo cuatro mujeres tenían consumo extremo. En portugués, los varones sufren un deterioro marcado al subir de estrato mientras las mujeres retienen su promedio; en matemáticas, el solapamiento de errores confirma que el alcohol no genera una brecha significativa en mujeres.
 :::
 
 ---
@@ -208,7 +209,7 @@ Las curvas de interacción muestran dinámicas distintas por materia. En matemá
 <div class="meta-bar">
   [\[1:36 - 1:53 | 17s\]]{.time-badge}
   [Distribuciones Híbridas Violín+Boxplot]{.tag-badge}
-  [Efecto Traveltime]{.tag-badge}
+  [Solapamiento y Resiliencia]{.tag-badge}
 </div>
 
 ::::: {.columns}
@@ -221,23 +222,25 @@ Las curvas de interacción muestran dinámicas distintas por materia. En matemá
 
 :::: {.column width="44%"}
 ::: {.contrast-card-emerald}
-[Rezago Estructural Urbano-Rural]{.text-emerald style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
+[Brecha Geográfica de Medias]{.text-emerald style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
 
-- **Distribución desplazada:** Violín + boxplot muestran medianas y rangos intercuartílicos más bajos en el sector rural, en ambas materias.
-- **Baja densidad en la cúspide:** Muy baja frecuencia de notas sobresalientes ($G3 > 15$) en el sector rural.
+- **Cohorte desbalanceada:** 301 urbanos frente a 81 rurales.
+- **Rezago promedio:** El sector rural promedia $1.0$ punto menos en Matemáticas ($9.6$ vs $10.6$) y $1.4$ puntos en Portugués ($11.4$ vs $12.8$).
+- **Fricción logística:** Mayor tiempo de viaje rural ($1.9$ h vs $1.3$ h urbano), restando horas netas para estudio y descanso.
 :::
 
 ::: {.contrast-card}
-[Mecanismo Causal: Tiempo de Viaje]{.text-cyan style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
+[Solapamiento Distribucional]{.text-cyan style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
 
-- La brecha responde en gran medida a `traveltime`: trayectos largos reducen el tiempo neto de estudio autónomo y descanso reparador.
+- **Resiliencia rural:** Las curvas de violín demuestran amplio solapamiento; múltiples estudiantes rurales superan con holgura la media urbana ($G3 \ge 15$).
+- **Matiz de política:** La geografía impone barreras de acceso y tiempo, pero de ningún modo constituye un límite al potencial cognitivo.
 :::
 ::::
 
 :::::
 
 ::: {.notes}
-El entorno geográfico también marca diferencia: el sector rural presenta un rezago constante frente al urbano, con notas desplazadas a la baja. Esta brecha está ligada al tiempo de viaje, que limita el descanso y el estudio.
+En la brecha urbano-rural observamos un rezago medio de uno a uno punto cuatro puntos, asociado a un mayor tiempo de viaje en zonas rurales. No obstante, las curvas de violín demuestran un solapamiento masivo: múltiples estudiantes rurales alcanzan calificaciones sobresalientes, confirmando que la geografía impone retos logísticos pero no un techo cognitivo.
 :::
 
 ---
@@ -247,7 +250,7 @@ El entorno geográfico también marca diferencia: el sector rural presenta un re
 <div class="meta-bar">
   [\[1:53 - 2:10 | 17s\]]{.time-badge}
   [Criterio de Tukey (IQR)]{.tag-badge}
-  [Ausentismo Extremo]{.tag-badge}
+  [Impacto Asimétrico en Notas]{.tag-badge}
 </div>
 
 ::::: {.columns}
@@ -260,26 +263,26 @@ El entorno geográfico también marca diferencia: el sector rural presenta un re
 
 :::: {.column width="44%"}
 ::: {.contrast-card}
-[Regla IQR de Tukey]{.text-rose style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
+[Detección Formal de Atípicos]{.text-rose style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
 
-- **Umbral Formal:** Línea discontinua calculada en $Q_3 + 1.5 \cdot \text{IQR}$ (20 fallas en Mat, 15 en Por).
-- **Atípicos Aislados:**
-  - [13 estudiantes]{.text-rose style="font-weight: 700;"} en Matemáticas (con casos extremos de hasta 75 inasistencias).
-  - [17 estudiantes]{.text-emerald style="font-weight: 700;"} en Portugués.
+- **Regla formal IQR ($Q_3 + 1.5 \cdot \text{IQR}$):**
+  - **Matemáticas:** Umbral de $20$ inasistencias $\rightarrow$ 13 atípicos ($3.4\%$, máximo 75).
+  - **Portugués:** Umbral de $15$ inasistencias $\rightarrow$ 17 atípicos ($4.5\%$, máximo 32).
+- **Focalización:** El ausentismo severo no es generalizado; afecta a menos del $5\%$ de los estudiantes.
 :::
 
 ::: {.contrast-card-accent}
-[Implicación Metodológica]{.text-amber style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
+[Impacto Asimétrico en el Rendimiento]{.text-amber style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
 
-- La asimetría positiva ($g_1 > 1.8$) distorsiona la media aritmética ($\bar{x}$).
-- El ausentismo severo no es la norma: es un fenómeno focalizado en una subpoblación crítica.
+- **Portugués:** Los atípicos promedian $10.71$ vs $12.60$ de los no atípicos (penalización severa de $-1.89$ puntos por ausentismo acumulado).
+- **Matemáticas:** Sorprendentemente, los atípicos promedian $10.23$ vs $10.39$ (impacto nulo de $-0.16$ puntos, sugiriendo mecanismos de autoaprendizaje).
 :::
 ::::
 
 :::::
 
 ::: {.notes}
-Aplicando la regla de Tukey a las inasistencias, detectamos trece atípicos en Matemáticas y diecisiete en Portugués, por encima del límite superior del rango intercuartílico. Este pequeño grupo, no la media, concentra el ausentismo extremo y merece atención diferenciada.
+La regla de Tukey identifica atípicos severos en menos del cinco por ciento del alumnado. El hallazgo clave es su asimetría pedagógica: mientras en portugués las ausencias recurrentes castigan la nota en casi dos puntos, en matemáticas la media de los atípicos es idéntica a la del resto, sugiriendo dinámicas de estudio autónomo diferenciadas.
 :::
 
 ---
@@ -300,28 +303,28 @@ Aplicando la regla de Tukey a las inasistencias, detectamos trece atípicos en M
 
 :::: {.column width="33%"}
 ::: {.contrast-card style="min-height: 440px;"}
-[1. Hábitos de Riesgo]{.text-cyan style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
+[1. Hábitos y Complejidad]{.text-cyan style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
 
-- El alcohol actúa como un **techo cognitivo** que impide acceder a calificaciones superiores.
-- Impacto heterogéneo: el deterioro en varones en el área lingüística es monótono y severo.
+- El alcohol presenta **efectos heterogéneos y no lineales**: marcada penalización en varones en lengua, pero correlación casi nula en matemáticas ($r = -0.03$).
+- La presencia de **alumnos resilientes** con notas altas exige descartar reglas deterministas simplistas en modelos de IA.
 :::
 ::::
 
 :::: {.column width="34%"}
 ::: {.contrast-card-emerald style="min-height: 440px;"}
-[2. Equidad en IA]{.text-emerald style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
+[2. Equidad Territorial]{.text-emerald style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
 
-- Los sistemas predictivos de alerta temprana deben ponderar variables logísticas (zona rural, tiempo de viaje).
-- Previene sesgos algorítmicos que penalicen a estudiantes con desventajas estructurales.
+- La brecha rural refleja **fricciones logísticas** (tiempo de trayecto), no una brecha intrínseca de capacidad.
+- Es imperativo evitar que algoritmos predictivos estigmaticen el origen territorial, reconociendo el solapamiento de excelencia.
 :::
 ::::
 
 :::: {.column width="33%"}
 ::: {.contrast-card-accent style="min-height: 440px;"}
-[3. Acción Focalizada]{.text-amber style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
+[3. Intervención Asimétrica]{.text-amber style="font-size: 1.15em; font-weight: 700; display: block; margin-bottom: 8px;"}
 
-- El ausentismo requiere políticas diferenciadas basadas en la **detección formal de atípicos (IQR)**.
-- Intervenciones preventivas dirigidas a la cohorte extrema en lugar de planes genéricos basados en medias.
+- El ausentismo severo ($< 5\%$ atípicos) debe abordarse con **tutorías diferenciadas**: rescate urgente en habilidades verbales donde el daño es cuantificable.
+- Diseñar políticas preventivas basadas en percentiles y colas en lugar de promedios agregados ciegos.
 :::
 ::::
 
@@ -334,5 +337,5 @@ Aplicando la regla de Tukey a las inasistencias, detectamos trece atípicos en M
 :::
 
 ::: {.notes}
-Para concluir: el alcohol funciona como un ancla cognitiva que limita el acceso a notas altas, con mayor severidad en hombres en el área lingüística. La brecha rural persiste, explicada por el tiempo de viaje. Estos hallazgos deben guiar políticas públicas y modelos predictivos más equitativos. Gracias.
+Para concluir: el consumo de alcohol muestra impactos heterogéneos y no deterministas, afectando principalmente el área verbal en varones. La brecha rural refleja fricción logística y no capacidad, y el ausentismo demanda atención focalizada por materia. Diseñemos modelos de IA justos y políticas educativas basadas en datos reales. Muchas gracias.
 :::

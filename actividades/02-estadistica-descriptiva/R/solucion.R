@@ -9,8 +9,9 @@ box::use(
     geom_violin, geom_boxplot, geom_hline, theme_minimal, labs,
     scale_color_viridis_d, scale_fill_manual, facet_wrap, theme,
     element_text, ggsave, scale_color_manual, stat_summary,
+    position_dodge, mean_se,
   ],
-  patchwork[wrap_plots],
+  patchwork[wrap_plots, plot_annotation],
   here[here],
   app/core/factory[data_source_factory],
   app/pipelines/preprocessing[clean_student_data, merge_student_data],
@@ -119,6 +120,21 @@ generate_and_export_charts <- function(merged_df) {
   )
   dir.create(export_dir, recursive = TRUE, showWarnings = FALSE)
 
+  # Categorización balanceada de consumo de alcohol (elimina artefacto n=4)
+  merged_df$walc_cat_mat <- factor(
+    ifelse(merged_df$Walc.mat <= 2, "Bajo (1-2)",
+      ifelse(merged_df$Walc.mat == 3, "Moderado (3)", "Alto (4-5)")
+    ),
+    levels = c("Bajo (1-2)", "Moderado (3)", "Alto (4-5)")
+  )
+
+  merged_df$walc_cat_por <- factor(
+    ifelse(merged_df$Walc.por <= 2, "Bajo (1-2)",
+      ifelse(merged_df$Walc.por == 3, "Moderado (3)", "Alto (4-5)")
+    ),
+    levels = c("Bajo (1-2)", "Moderado (3)", "Alto (4-5)")
+  )
+
   # 1. Correlación Cruzada (Math vs Portuguese)
   p1 <- ggplot(
     merged_df,
@@ -130,19 +146,27 @@ generate_and_export_charts <- function(merged_df) {
       se = FALSE,
       color = "#2c3e50",
       linetype = "dashed",
-      size = 1
+      linewidth = 1
     ) +
-    scale_color_viridis_d(name = "Alcohol Fin de Sem.") +
+    scale_color_viridis_d(name = "Consumo Alcohol") +
     theme_minimal() +
     labs(
-      title = "Alineamiento Académico: Matemáticas vs. Portugués",
-      subtitle = "Cohorte de estudiantes común (N = 382)",
+      title = "Alineamiento Académico y Consumo de Alcohol",
+      subtitle = paste0(
+        "Correlación intra-sujeto r = 0.48 | ",
+        "Alcohol vs Notas: r_por = -0.23, r_mat = -0.03"
+      ),
+      caption = paste0(
+        "Nota: Alta dispersión de notas en consumo elevado (Walc 4-5); ",
+        "15 estudiantes alcanzan notas >= 14."
+      ),
       x = "Nota Final Portugués (G3.por)",
       y = "Nota Final Matemáticas (G3.mat)"
     ) +
     theme(
       plot.title = element_text(face = "bold", size = 12),
-      plot.subtitle = element_text(size = 10, color = "#7f8c8d")
+      plot.subtitle = element_text(size = 9, color = "#475569"),
+      plot.caption = element_text(size = 8, color = "#64748b", face = "italic")
     )
 
   ggsave(
@@ -153,44 +177,106 @@ generate_and_export_charts <- function(merged_df) {
     dpi = 300
   )
 
-  # 2. Gráfico de Interacción Género y Alcohol
-  # Compute interaction averages for Math
+  # 2. Gráfico de Interacción Género y Alcohol (Barras de error y N balanceado)
   p2_mat <- ggplot(
     merged_df,
-    aes(x = as.factor(Walc.mat), y = G3.mat, group = sex, color = sex)
+    aes(x = walc_cat_mat, y = G3.mat, group = sex, color = sex)
   ) +
-    stat_summary(fun = mean, geom = "line", size = 1.2) +
-    stat_summary(fun = mean, geom = "point", size = 3) +
-    scale_color_manual(values = c("F" = "#e74c3c", "M" = "#3498db")) +
+    stat_summary(
+      fun.data = mean_se,
+      geom = "errorbar",
+      width = 0.15,
+      position = position_dodge(0.15)
+    ) +
+    stat_summary(
+      fun = mean,
+      geom = "line",
+      linewidth = 1,
+      position = position_dodge(0.15)
+    ) +
+    stat_summary(
+      fun = mean,
+      geom = "point",
+      size = 3,
+      position = position_dodge(0.15)
+    ) +
+    scale_color_manual(
+      values = c("F" = "#e74c3c", "M" = "#3498db"),
+      labels = c("F" = "Mujeres (F)", "M" = "Hombres (M)")
+    ) +
     theme_minimal() +
     labs(
       title = "Matemáticas (G3.mat)",
-      x = "Consumo Alcohol (1: Muy bajo, 5: Muy alto)",
-      y = "Promedio Calificación"
+      subtitle = "Hombres: n=(94, 32, 58) | Mujeres: n=(137, 44, 17)",
+      x = "Estrato de Consumo de Fin de Semana",
+      y = "Promedio Calificación (±1 SE)"
     ) +
-    theme(plot.title = element_text(face = "bold", size = 11))
+    theme(
+      plot.title = element_text(face = "bold", size = 11),
+      plot.subtitle = element_text(size = 8.5, color = "#64748b")
+    )
 
-  # Compute interaction averages for Portuguese
   p2_por <- ggplot(
     merged_df,
-    aes(x = as.factor(Walc.por), y = G3.por, group = sex, color = sex)
+    aes(x = walc_cat_por, y = G3.por, group = sex, color = sex)
   ) +
-    stat_summary(fun = mean, geom = "line", size = 1.2) +
-    stat_summary(fun = mean, geom = "point", size = 3) +
-    scale_color_manual(values = c("F" = "#e74c3c", "M" = "#3498db")) +
+    stat_summary(
+      fun.data = mean_se,
+      geom = "errorbar",
+      width = 0.15,
+      position = position_dodge(0.15)
+    ) +
+    stat_summary(
+      fun = mean,
+      geom = "line",
+      linewidth = 1,
+      position = position_dodge(0.15)
+    ) +
+    stat_summary(
+      fun = mean,
+      geom = "point",
+      size = 3,
+      position = position_dodge(0.15)
+    ) +
+    scale_color_manual(
+      values = c("F" = "#e74c3c", "M" = "#3498db"),
+      labels = c("F" = "Mujeres (F)", "M" = "Hombres (M)")
+    ) +
     theme_minimal() +
     labs(
       title = "Portugués (G3.por)",
-      x = "Consumo Alcohol (1: Muy bajo, 5: Muy alto)",
-      y = "Promedio Calificación"
+      subtitle = "Hombres: n=(93, 33, 58) | Mujeres: n=(137, 43, 18)",
+      x = "Estrato de Consumo de Fin de Semana",
+      y = "Promedio Calificación (±1 SE)"
     ) +
-    theme(plot.title = element_text(face = "bold", size = 11))
+    theme(
+      plot.title = element_text(face = "bold", size = 11),
+      plot.subtitle = element_text(size = 8.5, color = "#64748b")
+    )
 
   p2 <- wrap_plots(p2_mat, p2_por, ncol = 2, guides = "collect") +
-    labs(
-      title = "Efecto de Interacción: Género, Alcohol y Calificaciones",
-      subtitle = "Comparativa de medias según nivel de alcohol"
-    )
+    plot_annotation(
+      title = paste0(
+        "Efecto de Interacción: Género, Consumo de Alcohol ",
+        "y Calificaciones"
+      ),
+      subtitle = paste0(
+        "Medias muestrales y barras de error estándar ",
+        "(±1 SE) agrupadas por estrato"
+      ),
+      caption = paste0(
+        "La agrupación en 3 estratos neutraliza el artefacto ",
+        "muestral de celdas unitarias (n=4 en Walc 5)."
+      ),
+      theme = theme(
+        plot.title = element_text(face = "bold", size = 12),
+        plot.subtitle = element_text(size = 9.5, color = "#475569"),
+        plot.caption = element_text(
+          size = 8, color = "#64748b", face = "italic"
+        )
+      )
+    ) &
+    theme(legend.position = "bottom")
 
   ggsave(
     file.path(export_dir, "interaccion_genero_alcohol.png"),
@@ -208,10 +294,15 @@ generate_and_export_charts <- function(merged_df) {
     theme_minimal() +
     labs(
       title = "Calificación Matemáticas",
+      subtitle = "Urbano: media 10.6 | Rural: media 9.6",
       x = "Residencia (R: Rural, U: Urbano)",
       y = "Nota Final G3.mat"
     ) +
-    theme(legend.position = "none", plot.title = element_text(face = "bold"))
+    theme(
+      legend.position = "none",
+      plot.title = element_text(face = "bold", size = 11),
+      plot.subtitle = element_text(size = 9, color = "#64748b")
+    )
 
   p3_por <- ggplot(merged_df, aes(x = address, y = G3.por, fill = address)) +
     geom_violin(alpha = 0.5, trim = FALSE) +
@@ -220,15 +311,37 @@ generate_and_export_charts <- function(merged_df) {
     theme_minimal() +
     labs(
       title = "Calificación Portugués",
+      subtitle = "Urbano: media 12.8 | Rural: media 11.4",
       x = "Residencia (R: Rural, U: Urbano)",
       y = "Nota Final G3.por"
     ) +
-    theme(legend.position = "none", plot.title = element_text(face = "bold"))
+    theme(
+      legend.position = "none",
+      plot.title = element_text(face = "bold", size = 11),
+      plot.subtitle = element_text(size = 9, color = "#64748b")
+    )
 
   p3 <- wrap_plots(p3_mat, p3_por, ncol = 2) +
-    labs(
-      title = "Brecha Geográfica de Rendimiento",
-      subtitle = "Distribuciones híbridas según zona residencial"
+    plot_annotation(
+      title = paste0(
+        "Brecha Geográfica de Rendimiento y ",
+        "Solapamiento Distribucional"
+      ),
+      subtitle = paste0(
+        "Cohorte desbalanceada: Urbano (N = 301) vs. Rural (N = 81) | ",
+        "Mayor viaje rural (1.9h vs 1.3h)"
+      ),
+      caption = paste0(
+        "Nota: El amplio solapamiento evidencia resiliencia rural; ",
+        "muchos estudiantes rurales superan la media urbana."
+      ),
+      theme = theme(
+        plot.title = element_text(face = "bold", size = 12),
+        plot.subtitle = element_text(size = 9.5, color = "#475569"),
+        plot.caption = element_text(
+          size = 8, color = "#64748b", face = "italic"
+        )
+      )
     )
 
   ggsave(
@@ -240,9 +353,6 @@ generate_and_export_charts <- function(merged_df) {
   )
 
   # 4. Detección Formal de Atípicos en Inasistencias (Regla IQR)
-  # Unlike p3, outliers are shown explicitly (no `outlier.shape = NA`), and
-  # the upper Tukey fence is drawn so the "milla extra" claim is visual, not
-  # just narrative.
   outliers_mat <- iqr_outliers(merged_df, "absences.mat")
   outliers_por <- iqr_outliers(merged_df, "absences.por")
 
@@ -257,11 +367,21 @@ generate_and_export_charts <- function(merged_df) {
     ) +
     theme_minimal() +
     labs(
-      title = sprintf("Matemáticas (%d atípicos)", outliers_mat$n_outliers),
+      title = sprintf(
+        "Matemáticas (%d atípicos > %d faltas)",
+        outliers_mat$n_outliers, outliers_mat$upper_bound
+      ),
+      subtitle = paste0(
+        "Nota media: Atípicos = 10.23 vs No-atípicos = 10.39 ",
+        "(Sin impacto)"
+      ),
       x = NULL,
       y = "Inasistencias"
     ) +
-    theme(plot.title = element_text(face = "bold", size = 11))
+    theme(
+      plot.title = element_text(face = "bold", size = 11),
+      plot.subtitle = element_text(size = 8.5, color = "#64748b")
+    )
 
   p4_por <- ggplot(merged_df, aes(x = "Portugués", y = absences.por)) +
     geom_boxplot(
@@ -274,16 +394,43 @@ generate_and_export_charts <- function(merged_df) {
     ) +
     theme_minimal() +
     labs(
-      title = sprintf("Portugués (%d atípicos)", outliers_por$n_outliers),
+      title = sprintf(
+        "Portugués (%d atípicos > %d faltas)",
+        outliers_por$n_outliers, outliers_por$upper_bound
+      ),
+      subtitle = paste0(
+        "Nota media: Atípicos = 10.71 vs No-atípicos = 12.60 ",
+        "(-1.89 pts)"
+      ),
       x = NULL,
       y = "Inasistencias"
     ) +
-    theme(plot.title = element_text(face = "bold", size = 11))
+    theme(
+      plot.title = element_text(face = "bold", size = 11),
+      plot.subtitle = element_text(size = 8.5, color = "#64748b")
+    )
 
   p4 <- wrap_plots(p4_mat, p4_por, ncol = 2) +
-    labs(
-      title = "Detección Formal de Atípicos en Inasistencias (Regla IQR)",
-      subtitle = "Línea punteada = límite superior de Tukey (Q3 + 1.5·IQR)"
+    plot_annotation(
+      title = paste0(
+        "Detección Formal de Atípicos en Inasistencias ",
+        "(Regla IQR de Tukey)"
+      ),
+      subtitle = paste0(
+        "Impacto asimétrico: el ausentismo extremo penaliza en lenguaje ",
+        "pero no altera la media en matemáticas"
+      ),
+      caption = paste0(
+        "Línea punteada = límite superior de Tukey (Q3 + 1.5·IQR). ",
+        "Ausentismo concentrado en un subgrupo (< 5%)."
+      ),
+      theme = theme(
+        plot.title = element_text(face = "bold", size = 12),
+        plot.subtitle = element_text(size = 9.5, color = "#475569"),
+        plot.caption = element_text(
+          size = 8, color = "#64748b", face = "italic"
+        )
+      )
     )
 
   ggsave(
