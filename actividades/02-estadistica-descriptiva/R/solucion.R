@@ -5,16 +5,16 @@
 # styler: off
 box::use(
   ggplot2[
-    ggplot, aes, geom_jitter, geom_smooth, geom_line, geom_point,
-    geom_violin, geom_boxplot, geom_hline, theme_minimal, labs,
-    scale_color_viridis_d, scale_fill_manual, facet_wrap, theme,
-    element_text, ggsave, scale_color_manual, stat_summary,
+    ggplot, aes, geom_jitter, geom_smooth, geom_violin, geom_boxplot,
+    geom_hline, theme_minimal, labs, scale_color_viridis_d, scale_fill_manual,
+    theme, element_text, ggsave, scale_color_manual, stat_summary,
     position_dodge, mean_se,
   ],
   patchwork[wrap_plots, plot_annotation],
   here[here],
   app/core/factory[data_source_factory],
   app/pipelines/preprocessing[clean_student_data, merge_student_data],
+  app/pipelines/report_facts[report_facts, walc_stratum, fmt_num],
   app/pipelines/summary_stats[
     numeric_summary, categorical_summary, iqr_outliers,
   ],
@@ -105,275 +105,204 @@ run_descriptive_pipeline <- function(source_kind = "csv") {
     numeric_summary = sum_num,
     categorical_summary = sum_cat,
     outliers_mat = outliers_mat,
-    outliers_por = outliers_por
+    outliers_por = outliers_por,
+    facts = report_facts(merged_df)
   )
 }
 
-#' Generate and export high-resolution PNG charts
-#'
-#' @param merged_df Merged student performance data frame (N=382).
-#' @export
-generate_and_export_charts <- function(merged_df) {
-  # Create directory
-  export_dir <- here(
-    "actividades", "02-estadistica-descriptiva", "export_graficos"
-  )
-  dir.create(export_dir, recursive = TRUE, showWarnings = FALSE)
+subject_names <- c(mat = "Matemáticas", por = "Portugués")
 
-  # Categorización balanceada de consumo de alcohol (elimina artefacto n=4)
-  merged_df$walc_cat_mat <- factor(
-    ifelse(merged_df$Walc.mat <= 2, "Bajo (1-2)",
-      ifelse(merged_df$Walc.mat == 3, "Moderado (3)", "Alto (4-5)")
-    ),
-    levels = c("Bajo (1-2)", "Moderado (3)", "Alto (4-5)")
+# Shared look for the caption block of the combined figures.
+annotation_theme <- function() {
+  theme(
+    plot.title = element_text(face = "bold", size = 12),
+    plot.subtitle = element_text(size = 9.5, color = "#475569"),
+    plot.caption = element_text(size = 8, color = "#64748b", face = "italic")
   )
+}
 
-  merged_df$walc_cat_por <- factor(
-    ifelse(merged_df$Walc.por <= 2, "Bajo (1-2)",
-      ifelse(merged_df$Walc.por == 3, "Moderado (3)", "Alto (4-5)")
-    ),
-    levels = c("Bajo (1-2)", "Moderado (3)", "Alto (4-5)")
-  )
+# "94 / 32 / 58"-style counts for one sex across the three alcohol strata.
+strata_counts <- function(strata, subject, sex) {
+  rows <- strata[strata$subject == subject & strata$sex == sex, ]
+  paste(rows$n, collapse = " / ")
+}
 
-  # 1. Correlación Cruzada (Math vs Portuguese)
-  p1 <- ggplot(
-    merged_df,
-    aes(x = G3.por, y = G3.mat, color = as.factor(Walc.mat))
-  ) +
+# 1. Cross-subject scatter (Portuguese vs Math), coloured by weekend alcohol.
+chart_alignment <- function(df, facts) {
+  corr <- facts$corr
+  high <- facts$high_alcohol$mat
+
+  ggplot(df, aes(x = G3.por, y = G3.mat, color = as.factor(Walc.mat))) +
     geom_jitter(width = 0.5, height = 0.5, alpha = 0.7, size = 2) +
     geom_smooth(
-      method = "lm",
-      se = FALSE,
-      color = "#2c3e50",
-      linetype = "dashed",
-      linewidth = 1
+      method = "lm", se = FALSE, color = "#2c3e50",
+      linetype = "dashed", linewidth = 1
     ) +
-    scale_color_viridis_d(name = "Consumo Alcohol") +
+    scale_color_viridis_d(name = "Alcohol en fin\nde semana (1-5)") +
     theme_minimal() +
     labs(
-      title = "Alineamiento Académico y Consumo de Alcohol",
+      title = "Notas de Portugués y Matemáticas, según consumo de alcohol",
       subtitle = paste0(
-        "Correlación intra-sujeto r = 0.48 | ",
-        "Alcohol vs Notas: r_por = -0.23, r_mat = -0.03"
+        "Entre materias: r = ", fmt_num(corr$subjects$pearson, 2), "\n",
+        "Alcohol y nota: Portugués r = ", fmt_num(corr$alcohol_por$pearson, 2),
+        " | Matemáticas r = ", fmt_num(corr$alcohol_mat$pearson, 2)
       ),
-      caption = paste0(
-        "Nota: Alta dispersión de notas en consumo elevado (Walc 4-5); ",
-        "15 estudiantes alcanzan notas >= 14."
+      caption = sprintf(
+        paste0(
+          "Con consumo alto (4-5) en Matemáticas, %d de %d estudiantes ",
+          "tienen nota de 14 o más.\nLínea punteada: tendencia lineal."
+        ),
+        high$n_good, high$n_high
       ),
-      x = "Nota Final Portugués (G3.por)",
-      y = "Nota Final Matemáticas (G3.mat)"
+      x = "Nota final de Portugués (G3.por)",
+      y = "Nota final de Matemáticas (G3.mat)"
     ) +
     theme(
       plot.title = element_text(face = "bold", size = 12),
       plot.subtitle = element_text(size = 9, color = "#475569"),
       plot.caption = element_text(size = 8, color = "#64748b", face = "italic")
     )
+}
 
-  ggsave(
-    file.path(export_dir, "correlacion_cruzada.png"),
-    plot = p1,
-    width = 7,
-    height = 5,
-    dpi = 300
-  )
+# 2. Mean grade by alcohol stratum and sex, with +/- 1 standard error.
+interaction_panel <- function(df, subject, facts) {
+  df$stratum <- walc_stratum(df[[paste0("Walc.", subject)]])
+  df$grade <- df[[paste0("G3.", subject)]]
+  dodge <- position_dodge(0.15)
 
-  # 2. Gráfico de Interacción Género y Alcohol (Barras de error y N balanceado)
-  p2_mat <- ggplot(
-    merged_df,
-    aes(x = walc_cat_mat, y = G3.mat, group = sex, color = sex)
-  ) +
+  ggplot(df, aes(x = stratum, y = grade, group = sex, color = sex)) +
     stat_summary(
-      fun.data = mean_se,
-      geom = "errorbar",
-      width = 0.15,
-      position = position_dodge(0.15)
+      fun.data = mean_se, geom = "errorbar", width = 0.15, position = dodge
     ) +
-    stat_summary(
-      fun = mean,
-      geom = "line",
-      linewidth = 1,
-      position = position_dodge(0.15)
-    ) +
-    stat_summary(
-      fun = mean,
-      geom = "point",
-      size = 3,
-      position = position_dodge(0.15)
-    ) +
+    stat_summary(fun = mean, geom = "line", linewidth = 1, position = dodge) +
+    stat_summary(fun = mean, geom = "point", size = 3, position = dodge) +
     scale_color_manual(
       values = c("F" = "#e74c3c", "M" = "#3498db"),
-      labels = c("F" = "Mujeres (F)", "M" = "Hombres (M)")
+      labels = c("F" = "Mujeres", "M" = "Hombres"),
+      name = NULL
     ) +
     theme_minimal() +
     labs(
-      title = "Matemáticas (G3.mat)",
-      subtitle = "Hombres: n=(94, 32, 58) | Mujeres: n=(137, 44, 17)",
-      x = "Estrato de Consumo de Fin de Semana",
-      y = "Promedio Calificación (±1 SE)"
+      title = subject_names[[subject]],
+      subtitle = sprintf(
+        "Hombres n = %s | Mujeres n = %s",
+        strata_counts(facts$strata, subject, "M"),
+        strata_counts(facts$strata, subject, "F")
+      ),
+      x = "Consumo de alcohol en el fin de semana",
+      y = "Nota promedio (± 1 SE)"
     ) +
     theme(
       plot.title = element_text(face = "bold", size = 11),
       plot.subtitle = element_text(size = 8.5, color = "#64748b")
     )
+}
 
-  p2_por <- ggplot(
-    merged_df,
-    aes(x = walc_cat_por, y = G3.por, group = sex, color = sex)
+chart_interaction <- function(df, facts) {
+  five <- facts$walc5_by_sex
+
+  wrap_plots(
+    interaction_panel(df, "mat", facts),
+    interaction_panel(df, "por", facts),
+    ncol = 2, guides = "collect"
   ) +
-    stat_summary(
-      fun.data = mean_se,
-      geom = "errorbar",
-      width = 0.15,
-      position = position_dodge(0.15)
-    ) +
-    stat_summary(
-      fun = mean,
-      geom = "line",
-      linewidth = 1,
-      position = position_dodge(0.15)
-    ) +
-    stat_summary(
-      fun = mean,
-      geom = "point",
-      size = 3,
-      position = position_dodge(0.15)
-    ) +
-    scale_color_manual(
-      values = c("F" = "#e74c3c", "M" = "#3498db"),
-      labels = c("F" = "Mujeres (F)", "M" = "Hombres (M)")
-    ) +
-    theme_minimal() +
-    labs(
-      title = "Portugués (G3.por)",
-      subtitle = "Hombres: n=(93, 33, 58) | Mujeres: n=(137, 43, 18)",
-      x = "Estrato de Consumo de Fin de Semana",
-      y = "Promedio Calificación (±1 SE)"
-    ) +
-    theme(
-      plot.title = element_text(face = "bold", size = 11),
-      plot.subtitle = element_text(size = 8.5, color = "#64748b")
-    )
-
-  p2 <- wrap_plots(p2_mat, p2_por, ncol = 2, guides = "collect") +
     plot_annotation(
-      title = paste0(
-        "Efecto de Interacción: Género, Consumo de Alcohol ",
-        "y Calificaciones"
-      ),
+      title = "Nota promedio según consumo de alcohol y sexo",
       subtitle = paste0(
-        "Medias muestrales y barras de error estándar ",
-        "(±1 SE) agrupadas por estrato"
+        "Puntos = promedio del grupo; barras = ± 1 error estándar (SE). ",
+        "n por nivel: bajo / moderado / alto."
       ),
-      caption = paste0(
-        "La agrupación en 3 estratos neutraliza el artefacto ",
-        "muestral de celdas unitarias (n=4 en Walc 5)."
+      caption = sprintf(
+        paste0(
+          "Se agruparon 3 niveles de alcohol porque en el nivel 5 solo ",
+          "había %d mujeres y %d hombres."
+        ),
+        five[["F"]], five[["M"]]
       ),
-      theme = theme(
-        plot.title = element_text(face = "bold", size = 12),
-        plot.subtitle = element_text(size = 9.5, color = "#475569"),
-        plot.caption = element_text(
-          size = 8, color = "#64748b", face = "italic"
-        )
-      )
+      theme = annotation_theme()
     ) &
     theme(legend.position = "bottom")
+}
 
-  ggsave(
-    file.path(export_dir, "interaccion_genero_alcohol.png"),
-    plot = p2,
-    width = 9,
-    height = 5,
-    dpi = 300
-  )
+# 3. Violin + boxplot of grades by residence zone.
+geography_panel <- function(df, subject, gap) {
+  df$grade <- df[[paste0("G3.", subject)]]
 
-  # 3. Gráfico de Brecha Geográfica (Urbano vs Rural)
-  p3_mat <- ggplot(merged_df, aes(x = address, y = G3.mat, fill = address)) +
+  ggplot(df, aes(x = address, y = grade, fill = address)) +
     geom_violin(alpha = 0.5, trim = FALSE) +
     geom_boxplot(width = 0.2, color = "black", outlier.shape = NA) +
     scale_fill_manual(values = c("R" = "#e67e22", "U" = "#2ecc71")) +
     theme_minimal() +
     labs(
-      title = "Calificación Matemáticas",
-      subtitle = "Urbano: media 10.6 | Rural: media 9.6",
-      x = "Residencia (R: Rural, U: Urbano)",
-      y = "Nota Final G3.mat"
-    ) +
-    theme(
-      legend.position = "none",
-      plot.title = element_text(face = "bold", size = 11),
-      plot.subtitle = element_text(size = 9, color = "#64748b")
-    )
-
-  p3_por <- ggplot(merged_df, aes(x = address, y = G3.por, fill = address)) +
-    geom_violin(alpha = 0.5, trim = FALSE) +
-    geom_boxplot(width = 0.2, color = "black", outlier.shape = NA) +
-    scale_fill_manual(values = c("R" = "#e67e22", "U" = "#2ecc71")) +
-    theme_minimal() +
-    labs(
-      title = "Calificación Portugués",
-      subtitle = "Urbano: media 12.8 | Rural: media 11.4",
-      x = "Residencia (R: Rural, U: Urbano)",
-      y = "Nota Final G3.por"
-    ) +
-    theme(
-      legend.position = "none",
-      plot.title = element_text(face = "bold", size = 11),
-      plot.subtitle = element_text(size = 9, color = "#64748b")
-    )
-
-  p3 <- wrap_plots(p3_mat, p3_por, ncol = 2) +
-    plot_annotation(
-      title = paste0(
-        "Brecha Geográfica de Rendimiento y ",
-        "Solapamiento Distribucional"
-      ),
+      title = subject_names[[subject]],
       subtitle = paste0(
-        "Cohorte desbalanceada: Urbano (N = 301) vs. Rural (N = 81) | ",
-        "Mayor viaje rural (1.9h vs 1.3h)"
+        "Media urbana ", fmt_num(gap$mean_urban), " | rural ",
+        fmt_num(gap$mean_rural)
       ),
-      caption = paste0(
-        "Nota: El amplio solapamiento evidencia resiliencia rural; ",
-        "muchos estudiantes rurales superan la media urbana."
-      ),
-      theme = theme(
-        plot.title = element_text(face = "bold", size = 12),
-        plot.subtitle = element_text(size = 9.5, color = "#475569"),
-        plot.caption = element_text(
-          size = 8, color = "#64748b", face = "italic"
-        )
-      )
+      x = "Zona de residencia (R = rural, U = urbana)",
+      y = paste0("Nota final (G3.", subject, ")")
+    ) +
+    theme(
+      legend.position = "none",
+      plot.title = element_text(face = "bold", size = 11),
+      plot.subtitle = element_text(size = 9, color = "#64748b")
     )
+}
 
-  ggsave(
-    file.path(export_dir, "brecha_urbano_rural.png"),
-    plot = p3,
-    width = 9,
-    height = 5,
-    dpi = 300
-  )
+chart_geography <- function(df, facts) {
+  gap <- facts$address
+  gap_mat <- gap[gap$subject == "mat", ]
+  gap_por <- gap[gap$subject == "por", ]
+  travel <- facts$long_travel * 100
 
-  # 4. Detección Formal de Atípicos en Inasistencias (Regla IQR)
-  outliers_mat <- iqr_outliers(merged_df, "absences.mat")
-  outliers_por <- iqr_outliers(merged_df, "absences.por")
+  wrap_plots(
+    geography_panel(df, "mat", gap_mat),
+    geography_panel(df, "por", gap_por),
+    ncol = 2
+  ) +
+    plot_annotation(
+      title = "Notas según zona de residencia",
+      subtitle = sprintf(
+        paste0(
+          "Urbano N = %d | Rural N = %d | Viajan 30 min o más: ",
+          "%s%% urbano vs %s%% rural"
+        ),
+        gap_mat$n_urban, gap_mat$n_rural,
+        fmt_num(travel[["urban"]], 0), fmt_num(travel[["rural"]], 0)
+      ),
+      caption = sprintf(
+        paste0(
+          "Las distribuciones se solapan: %d de %d estudiantes rurales ",
+          "superan la media urbana en Matemáticas y %d en Portugués."
+        ),
+        gap_mat$rural_above_urban, gap_mat$n_rural, gap_por$rural_above_urban
+      ),
+      theme = annotation_theme()
+    )
+}
 
-  p4_mat <- ggplot(merged_df, aes(x = "Matemáticas", y = absences.mat)) +
+# 4. Boxplot of absences with the upper Tukey fence drawn as a dashed line.
+absence_panel <- function(df, subject, profile, fill) {
+  df$absences <- df[[paste0("absences.", subject)]]
+  df$label <- subject_names[[subject]]
+
+  ggplot(df, aes(x = label, y = absences)) +
     geom_boxplot(
-      fill = "#e74c3c", alpha = 0.5,
-      outlier.color = "#c0392b", outlier.size = 2
+      fill = fill, alpha = 0.5, outlier.color = "#c0392b", outlier.size = 2
     ) +
     geom_hline(
-      yintercept = outliers_mat$upper_bound,
-      linetype = "dashed", color = "#2c3e50"
+      yintercept = profile$upper, linetype = "dashed", color = "#2c3e50"
     ) +
     theme_minimal() +
     labs(
       title = sprintf(
-        "Matemáticas (%d atípicos > %d faltas)",
-        outliers_mat$n_outliers, outliers_mat$upper_bound
+        "%s: %d atípicos (más de %d faltas)",
+        subject_names[[subject]], profile$n_out, profile$upper
       ),
-      subtitle = paste0(
-        "Nota media: Atípicos = 10.23 vs No-atípicos = 10.39 ",
-        "(Sin impacto)"
+      subtitle = sprintf(
+        "Nota media: atípicos %s | resto %s (%s sin las notas 0)",
+        fmt_num(profile$mean_out), fmt_num(profile$mean_rest),
+        fmt_num(profile$mean_rest_nonzero)
       ),
       x = NULL,
       y = "Inasistencias"
@@ -382,64 +311,73 @@ generate_and_export_charts <- function(merged_df) {
       plot.title = element_text(face = "bold", size = 11),
       plot.subtitle = element_text(size = 8.5, color = "#64748b")
     )
+}
 
-  p4_por <- ggplot(merged_df, aes(x = "Portugués", y = absences.por)) +
-    geom_boxplot(
-      fill = "#2ecc71", alpha = 0.5,
-      outlier.color = "#27ae60", outlier.size = 2
-    ) +
-    geom_hline(
-      yintercept = outliers_por$upper_bound,
-      linetype = "dashed", color = "#2c3e50"
-    ) +
-    theme_minimal() +
-    labs(
-      title = sprintf(
-        "Portugués (%d atípicos > %d faltas)",
-        outliers_por$n_outliers, outliers_por$upper_bound
-      ),
-      subtitle = paste0(
-        "Nota media: Atípicos = 10.71 vs No-atípicos = 12.60 ",
-        "(-1.89 pts)"
-      ),
-      x = NULL,
-      y = "Inasistencias"
-    ) +
-    theme(
-      plot.title = element_text(face = "bold", size = 11),
-      plot.subtitle = element_text(size = 8.5, color = "#64748b")
-    )
+chart_absences <- function(df, facts) {
+  prof <- facts$absences
+  prof_mat <- prof[prof$subject == "mat", ]
+  prof_por <- prof[prof$subject == "por", ]
 
-  p4 <- wrap_plots(p4_mat, p4_por, ncol = 2) +
+  wrap_plots(
+    absence_panel(df, "mat", prof_mat, "#e74c3c"),
+    absence_panel(df, "por", prof_por, "#2ecc71"),
+    ncol = 2
+  ) +
     plot_annotation(
-      title = paste0(
-        "Detección Formal de Atípicos en Inasistencias ",
-        "(Regla IQR de Tukey)"
+      title = "Inasistencias muy alejadas del resto (regla de Tukey)",
+      subtitle = sprintf(
+        "Menos del %d%% del alumnado: %s%% en Matemáticas y %s%% en Portugués",
+        ceiling(max(prof$pct_out) * 100),
+        fmt_num(prof_mat$pct_out * 100), fmt_num(prof_por$pct_out * 100)
       ),
-      subtitle = paste0(
-        "Impacto asimétrico: el ausentismo extremo penaliza en lenguaje ",
-        "pero no altera la media en matemáticas"
+      caption = sprintf(
+        paste0(
+          "Línea punteada = límite de Tukey (Q3 + 1.5·IQR). En Matemáticas, ",
+          "%d estudiantes tienen nota 0 y ninguna falta."
+        ),
+        prof_mat$n_zero_no_absences
       ),
-      caption = paste0(
-        "Línea punteada = límite superior de Tukey (Q3 + 1.5·IQR). ",
-        "Ausentismo concentrado en un subgrupo (< 5%)."
-      ),
-      theme = theme(
-        plot.title = element_text(face = "bold", size = 12),
-        plot.subtitle = element_text(size = 9.5, color = "#475569"),
-        plot.caption = element_text(
-          size = 8, color = "#64748b", face = "italic"
-        )
-      )
+      theme = annotation_theme()
     )
+}
 
-  ggsave(
-    file.path(export_dir, "atipicos_inasistencias.png"),
-    plot = p4,
-    width = 9,
-    height = 5,
-    dpi = 300
+#' Generate and export high-resolution PNG charts
+#'
+#' Every figure quoted in a title, subtitle or caption is computed from the
+#' data through [report_facts()], so the charts cannot drift from the report.
+#'
+#' @param merged_df Merged student performance data frame (N=382).
+#' @return Invisibly, a list with the four ggplot objects `p1` to `p4`.
+#' @export
+generate_and_export_charts <- function(merged_df) {
+  export_dir <- here(
+    "actividades", "02-estadistica-descriptiva", "export_graficos"
+  )
+  dir.create(export_dir, recursive = TRUE, showWarnings = FALSE)
+
+  facts <- report_facts(merged_df)
+  plots <- list(
+    p1 = chart_alignment(merged_df, facts),
+    p2 = chart_interaction(merged_df, facts),
+    p3 = chart_geography(merged_df, facts),
+    p4 = chart_absences(merged_df, facts)
   )
 
-  invisible(list(p1 = p1, p2 = p2, p3 = p3, p4 = p4))
+  exports <- list(
+    p1 = c("correlacion_cruzada.png", 7),
+    p2 = c("interaccion_genero_alcohol.png", 9),
+    p3 = c("brecha_urbano_rural.png", 9),
+    p4 = c("atipicos_inasistencias.png", 9)
+  )
+  for (name in names(exports)) {
+    ggsave(
+      file.path(export_dir, exports[[name]][[1L]]),
+      plot = plots[[name]],
+      width = as.numeric(exports[[name]][[2L]]),
+      height = 5,
+      dpi = 300
+    )
+  }
+
+  invisible(plots)
 }
