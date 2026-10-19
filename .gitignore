@@ -25,6 +25,7 @@ renv/staging/
 /.quarto/
 **/_site/
 **/*_files/
+**/*.rmarkdown
 **/*.html
 !**/informe*.html
 !**/presentacion*.html
