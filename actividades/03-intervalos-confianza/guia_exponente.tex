@@ -1,0 +1,115 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{amsmath}
+
+% Configuración de márgenes
+\geometry{top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm, headheight=14pt}
+
+% Definición de colores corporativos
+\definecolor{sabanaBlue}{HTML}{1b3a4b}
+\definecolor{darkGrey}{HTML}{2c3e50}
+\definecolor{accentGrey}{HTML}{7f8c8d}
+\definecolor{timeRed}{HTML}{c0392b}
+
+% Configuración de encabezado y pie de página
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\color{sabanaBlue}\bfseries S1 Métodos Estadísticos Avanzados}
+\rhead{\color{accentGrey}Juan Nicolás Patiño Rodríguez}
+\lfoot{\color{accentGrey}Guía del Exponente — Universidad de La Sabana}
+\rfoot{\color{sabanaBlue}\bfseries Página \thepage}
+
+% Títulos de sección personalizados
+\titleformat{\section}
+  {\color{sabanaBlue}\normalfont\large\bfseries}
+  {\thesection}{1em}{}
+
+\begin{document}
+
+% Portada / Cabecera limpia
+\begin{center}
+  {\fontsize{15}{19}\selectfont \color{sabanaBlue}\bfseries GUÍA DEL EXPONENTE: PRESENTACIÓN EN VIVO (2.5 MINUTOS / 150 SEGUNDOS)}\\[0.2cm]
+  {\fontsize{12}{15}\selectfont \color{darkGrey}\bfseries Unidad 3 — Inferencia por Intervalos de Confianza en el Rendimiento Académico}\\[0.1cm]
+  {\color{accentGrey}\itshape Juan Nicolás Patiño Rodríguez — Maestría en Inteligencia Artificial}\\[0.4cm]
+  \hrule
+\end{center}
+
+\vspace{0.2cm}
+
+\section*{Instrucciones de Dirección y Lectura Visual de Gráficas}
+\begin{itemize}[noitemsep,topsep=0pt]
+  \item \textbf{Duración Objetivo:} 2.5 minutos (150 segundos / \texttt{02:30} en el cronómetro HUD). El guion tiene \textbf{297 palabras}: a unas 120--140 palabras por minuto cabe entre 2:07 y 2:28 con pausas para señalar.
+  \item \textbf{Ritmo:} no leer la tabla en voz alta; la tabla queda en pantalla como respaldo. Decir solo las cifras del guion (redondeadas) y señalar el elemento del gráfico que se nombra.
+  \item \textbf{Cobertura de la guía U3:} problema (D1), resumen descriptivo (D1), intervalos e interpretación (D2--D5), conclusiones (D4--D5), límites (D5) y aplicaciones (D5).
+  \item \textbf{Control en Vivo:} Iniciar cronómetro con tecla \texttt{T} (\texttt{0:00 / 2:30}); alerta ámbar a los \texttt{2:05} y roja a los \texttt{2:25}.
+\end{itemize}
+
+\hrule
+
+\vspace{0.35cm}
+
+% --- SLIDE 1 ---
+\noindent
+\textbf{\large Diapositiva 1: De la descripción a la inferencia: las 3 variables} \hfill \textcolor{timeRed}{\textbf{[0:00 - 0:22 | 22s]}}
+\begin{description}[noitemsep,topsep=2pt]
+  \item[Visual en Pantalla:] Pregunta inferencial, cohorte pareada $N = 382$, nivel de confianza del 95\%, $5{,}000$ réplicas Bootstrap y las 3 variables (\texttt{G3}, \texttt{absences}, \texttt{Walc}).
+  \item[Guion de Voz (45 palabras):]
+    «Hola. Seguimos con los 382 estudiantes que cursan Matemáticas y Portugués. En la Unidad 2 vimos notas más altas en Portugués y faltas muy asimétricas. Hoy preguntamos: ¿qué podemos afirmar de toda la población, con 95\% de confianza, sobre notas, faltas y consumo de alcohol?»
+\end{description}
+
+\vspace{0.35cm}
+
+% --- SLIDE 2 ---
+\noindent
+\textbf{\large Diapositiva 2: Intervalos del 95\% para las medias de las 3 variables} \hfill \textcolor{timeRed}{\textbf{[0:22 - 0:54 | 32s]}}
+\begin{description}[noitemsep,topsep=2pt]
+  \item[Visual en Pantalla:] \textit{ic\_medias\_comparativo.png} y tabla comparativa ($t$-Student vs.\ Bootstrap); ventaja pareada de $+2.13$ puntos en Portugués ($\text{IC}_{95\%}: [1.71, 2.55]$).
+  \item[Señalar:] Histograma celeste (Matemáticas) y verde (Portugués); línea negra (media); azul discontinua ($t$) y roja punteada (Bootstrap) casi superpuestas.
+  \item[Guion de Voz (63 palabras):]
+    «En esta gráfica, cada histograma reúne 5.000 medias simuladas por Bootstrap. La línea azul, del método clásico, y la roja, del Bootstrap, casi coinciden porque la muestra es grande. Con 95\% de confianza, la nota media va de 9.9 a 10.9 en Matemáticas y de 12.2 a 12.8 en Portugués. Y comparando a cada estudiante consigo mismo, Portugués supera por unos 2 puntos.»
+\end{description}
+
+\vspace{0.35cm}
+
+% --- SLIDE 3 ---
+\noindent
+\textbf{\large Diapositiva 3: Asimetría en inasistencias: ¿cambia la conclusión con Bootstrap?} \hfill \textcolor{timeRed}{\textbf{[0:54 - 1:25 | 31s]}}
+\begin{description}[noitemsep,topsep=2pt]
+  \item[Visual en Pantalla:] \textit{bootstrap\_distribucion\_inasistencias.png}; asimetría $4.01$; IC $t$ $[4.552, 6.086]$ vs.\ Bootstrap $[4.584, 6.097]$; error estándar $0.390$ en ambos métodos.
+  \item[Señalar:] Panel A (cola hasta 75 faltas; media roja 5.32 vs.\ mediana azul 3) y Panel B (campana de medias; líneas azul y roja casi juntas).
+  \item[Guion de Voz (62 palabras):]
+    «Las faltas son el caso exigente. A la izquierda, la mayoría falta poco, pero algunos llegan a 75, y eso separa la media, 5.3, de la mediana, 3. A la derecha, por el Teorema Central del Límite, las medias remuestreadas forman una campana y ambos intervalos coinciden: entre 4.6 y 6.1 faltas. El Bootstrap confirma que el método clásico sigue siendo confiable.»
+\end{description}
+
+\vspace{0.35cm}
+
+% --- SLIDE 4 ---
+\noindent
+\textbf{\large Diapositiva 4: Contrastes por alcohol: el valor de mirar las 3 variables} \hfill \textcolor{timeRed}{\textbf{[1:25 - 1:56 | 31s]}}
+\begin{description}[noitemsep,topsep=2pt]
+  \item[Visual en Pantalla:] \textit{contraste\_alcohol\_ic.png} y tabla Alto (4--5) menos Bajo (1--2): Portugués $-1.66$ $[-2.45, -0.87]$; Matemáticas $-0.42$ $[-1.50, 0.65]$; faltas $+4.29$ $[2.03, 6.54]$ y $+1.82$ $[0.47, 3.18]$.
+  \item[Señalar:] Línea gris discontinua en el cero; barras azules (Welch) y rojas (Bootstrap). Cruzar el 0 = no concluyente; no tocarlo = diferencia clara.
+  \item[Guion de Voz (62 palabras):]
+    «Ahora, alcohol alto frente a bajo. Miren la línea gris del cero: si el intervalo la cruza, la diferencia podría ser azar; si no la toca, es clara. En Matemáticas la nota cruza el cero: no es concluyente. En Portugués, quienes beben más tienen 1.7 puntos menos, y faltan más: 4.3 faltas en Matemáticas y 1.8 en Portugués. Son asociaciones, no causas.»
+\end{description}
+
+\vspace{0.35cm}
+
+% --- SLIDE 5 ---
+\noindent
+\textbf{\large Diapositiva 5: Aprobación, límites y aplicaciones} \hfill \textcolor{timeRed}{\textbf{[1:56 - 2:30 | 34s]}}
+\begin{description}[noitemsep,topsep=2pt]
+  \item[Visual en Pantalla:] \textit{proporciones\_aprobacion\_ic.png}; aprobación $91.6\%$ vs.\ $66.8\%$ ($-24.9$ pp); tarjetas de lectura, límites y aplicaciones.
+  \item[Señalar:] Intervalos verdes (Portugués) siempre por encima de los azules (Matemáticas); intervalos más largos en moderado y alto ($n \approx 75$) que en bajo ($n \approx 230$).
+  \item[Guion de Voz (65 palabras):]
+    «Por último, aprobar con 10 o más: 92\% en Portugués frente a 67\% en Matemáticas, y en ningún nivel de alcohol los intervalos se tocan. Los grupos moderado y alto tienen unos 75 estudiantes; por eso sus barras son más largas. Límites: dos colegios portugueses, solo quienes cursan ambas materias y alcohol autorreportado. Aun así, sugiere reforzar tutorías en Matemáticas y vigilar el ausentismo. ¡Gracias!»
+\end{description}
+
+\end{document}

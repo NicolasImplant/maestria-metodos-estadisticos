@@ -1,0 +1,587 @@
+---
+title: "Inferencia Estadística por Intervalos de Confianza en el Rendimiento Académico"
+subtitle: "S1 Métodos Estadísticos Avanzados — Unidad 3"
+author: "Juan Nicolás Patiño Rodríguez"
+institution: "Universidad de La Sabana — Maestría en Inteligencia Artificial"
+date: "2026-10-18"
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    number-sections: true
+    self-contained: true
+---
+
+```{r}
+#| label: setup
+#| include: false
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+# Reproducibilidad determinista para remuestreo Bootstrap
+set.seed(2026)
+
+# Configurar box.path hacia la raíz del repositorio
+options(box.path = normalizePath(here::here()))
+
+# Importación modular explícita con box::use
+box::use(
+  knitr[kable],
+  R / solucion[
+    run_inferential_pipeline,
+    generate_and_export_charts
+  ],
+  app / pipelines / inferential_facts[fmt_num, fmt_ci]
+)
+
+# Ejecutar el pipeline inferencial (Paramétrico + Bootstrap B = 5000)
+res <- run_inferential_pipeline(
+  source_kind = "sqlite",
+  n_boot = 5000L,
+  seed = 2026L
+)
+
+# Generar y exportar gráficos en PNG de alta resolución (300 DPI)
+plots <- generate_and_export_charts(res)
+
+# Cifras dinámicas para el texto del informe (cero valores fijos a mano)
+f <- res$facts
+u <- f$univariate
+c_alc <- f$contrasts$alcohol
+c_addr <- f$contrasts$address
+pr <- f$proportions
+vr <- f$var_ratios
+
+pct <- function(p, digits = 1) paste0(fmt_num(100 * p, digits), "%")
+```
+
+# Contexto y objetivo
+
+**Tema en continuidad con la Unidad 2:** Tema 3 — *"¿Influye nuestro estilo de
+vida en el rendimiento académico?"*
+
+En la Unidad 2 describimos el comportamiento muestral de las calificaciones,
+las inasistencias y el consumo de alcohol en nuestra cohorte de estudiantes. Sin
+embargo, un promedio muestral ($\bar{X}$) o una proporción muestral ($\hat{p}$)
+es solo una **estimación puntual**: si tomáramos otra muestra de estudiantes de
+la misma población, obtendríamos un valor ligeramente distinto debido a la
+variabilidad muestral.
+
+**Pregunta de investigación inferencial:** ¿Entre qué rangos de valores
+plausibles se encuentran las verdaderas medias poblacionales y proporciones de
+aprobación de Matemáticas y Lengua Portuguesa, qué tan sensibles son estos
+intervalos a la fuerte asimetría de las inasistencias cuando comparamos métodos
+paramétricos ($t$-Student / Welch) frente a no paramétricos (Bootstrap
+Percentil), y en qué casos las diferencias entre niveles de consumo de alcohol
+(`Walc`) y zona de residencia (`address`) excluyen el valor nulo ($0$)?
+
+**Objetivos específicos (enfoque de tres variables + proporciones y varianzas):**
+
+* **Estimar** intervalos de confianza del 95% tanto paramétricos ($t$-Student)
+  como no paramétricos (Bootstrap Percentil con $B = `r f$cohort$n_boot`$
+  réplicas) para las medias de las **tres variables centrales del estudio**:
+  calificación final (`G3`), inasistencias escolares (`absences`) y consumo de
+  alcohol de fin de semana (`Walc`).
+* **Evaluar** el impacto de la asimetría positiva extrema de `absences` sobre la
+  distribución muestral de la media y comparar la estabilidad de los límites
+  paramétricos frente a los percentiles empíricos de Bootstrap.
+* **Contrastar** mediante intervalos de confianza de dos muestras (Welch y
+  Bootstrap) las brechas por consumo de alcohol (Alto `4-5` vs. Bajo `1-2`) y
+  zona de residencia (Rural vs. Urbano), diferenciando qué brechas son
+  estadísticamente distinguibles de cero y cuáles resultan inconclusas.
+* **Cuantificar** la incertidumbre sobre la proporción de aprobación académica
+  ($G3 \ge 10$) mediante los métodos de Wald y Wilson, así como la razón de
+  varianzas poblacionales ($\sigma^2_{\text{mat}} / \sigma^2_{\text{por}}$)
+  mediante Bootstrap pareado, respetando que son los mismos estudiantes.
+
+# Datos y metodología inferencial
+
+## Cohorte de estudio
+
+**Fuente:** *Student Performance Data Set* (UCI Machine Learning Repository),
+publicado por Cortez & Silva (2008) — ver [Referencias](#referencias). Al igual
+que en la Unidad 2, empleamos la cohorte fusionada de **$N = `r f$cohort$n`$
+perfiles estudiantiles** presentes simultáneamente en Matemáticas y Lengua
+Portuguesa mediante las 13 llaves demográficas estándar. Los datos se leen de
+forma reproducible desde el motor relacional SQLite local
+(`student_performance.db`) con respaldo automático a los archivos CSV
+originales.
+
+## Marco metodológico: Paramétrico vs. No Paramétrico
+
+Para garantizar rigor inferencial frente a variables con distinta forma
+distribucional, aplicamos dos familias complementarias de intervalos al **95%
+de confianza** ($1 - \alpha = 0.95$, $\alpha = 0.05$):
+
+1. **Enfoque paramétrico clásico:**
+   * *Media poblacional ($\mu$ con $\sigma^2$ desconocida):* estadístico pivote
+     $t$-Student con $n - 1$ grados de libertad:
+     $$\text{IC}_{95\%}(\mu) = \bar{X} \pm t_{1-\alpha/2,\,n-1}\frac{S}{\sqrt{n}}$$
+   * *Diferencia de medias independientes ($\mu_1 - \mu_2$ con varianzas
+     desconocidas y potencialmente distintas):* intervalo $t$ de Welch-Satterthwaite,
+     que evita el supuesto restrictivo de homocedasticidad ($\sigma_1^2 = \sigma_2^2$).
+   * *Proporción poblacional ($p$):* intervalos asintóticos normales de Wald y
+     corrección cuadrática de Wilson (más estable cuando $p$ se acerca a los
+     bordes $0$ o $1$).
+   * *Diferencia de proporciones pareada ($p_{\text{mat}} - p_{\text{por}}$):*
+     como cada estudiante aporta ambas notas, se usa el intervalo de Wald
+     pareado, cuya varianza depende de los casos discordantes:
+     $$\widehat{\text{Var}}(\hat{d}) = \frac{\hat{p}_{10} + \hat{p}_{01} - \hat{d}^2}{n}$$
+   * *Cociente de varianzas ($\sigma_1^2 / \sigma_2^2$):* el intervalo $F$ de
+     Snedecor exige muestras independientes y normales; como las notas son
+     pareadas y `G3.mat` no es normal, se reporta un **Bootstrap Percentil
+     pareado** que remuestrea estudiantes completos.
+
+2. **Enfoque no paramétrico (Bootstrap Percentil):**
+   * Cuando la distribución subyacente presenta asimetría severa y valores
+     atípicos (como `absences`, con coeficiente de asimetría de
+     $`r fmt_num(u$abs_mat$skewness, 2)`$ en Matemáticas y
+     $`r fmt_num(u$abs_por$skewness, 2)`$ en Portugués) o vive en una escala
+     ordinal acotada (`Walc` de 1 a 5), el supuesto de normalidad exacta no se
+     cumple.
+   * Generamos $B = `r f$cohort$n_boot`$ muestras con reemplazo de tamaño $n$ a
+     partir de los datos observados (semilla fija `set.seed(2026)`), calculamos
+     el estadístico en cada réplica $\hat{\theta}^{*(b)}$ y tomamos los
+     percentiles empíricos $\alpha/2 = 2.5\%$ y $1 - \alpha/2 = 97.5\%$:
+     $$\text{IC}_{\text{Boot}, 95\%}(\theta) = \left[Q_{0.025}\!\left(\hat{\theta}^*\right),\; Q_{0.975}\!\left(\hat{\theta}^*\right)\right]$$
+
+> **Interpretación frecuentista correcta del 95% de confianza:** El parámetro
+> poblacional $\mu$ es una cantidad **fija** (no aleatoria); lo que es aleatorio
+> es el intervalo construido a partir de la muestra. Decir que tenemos un 95% de
+> confianza significa que, si repitiéramos el muestreo muchas veces bajo las
+> mismas condiciones, aproximadamente el 95% de los intervalos construidos
+> contendrían al verdadero parámetro poblacional. Por su parte, la media
+> muestral observada ($\bar{X}$) siempre se ubica en el centro del intervalo
+> simétrico por construcción matemática.
+
+# Intervalos de confianza para las medias de las 3 variables
+
+Evaluamos de manera simultánea nuestras tres variables de estudio (`G3`,
+`absences` y `Walc`) comparando el intervalo paramétrico $t$-Student frente al
+intervalo no paramétrico Bootstrap Percentil ($B = 5{,}000$).
+
+```{r}
+#| label: tbl-univariate-ci
+vars_keep <- c(
+  "G3.mat", "G3.por", "absences.mat", "absences.por", "Walc.mat"
+)
+tbl_uni <- f$univariate_table[f$univariate_table$variable %in% vars_keep, ]
+df_uni_disp <- data.frame(
+  Variable = c(
+    "Nota final Matemáticas (G3.mat, 0-20)",
+    "Nota final Portugués (G3.por, 0-20)",
+    "Inasistencias Matemáticas (absences.mat)",
+    "Inasistencias Portugués (absences.por)",
+    "Alcohol fin de semana (Walc, escala 1-5)"
+  ),
+  n = tbl_uni$n,
+  Media = round(tbl_uni$mean, 3),
+  DE = round(tbl_uni$sd, 3),
+  Asimetria = round(tbl_uni$skewness, 2),
+  IC_t_95 = sprintf("[%.3f, %.3f]", tbl_uni$t_low, tbl_uni$t_high),
+  IC_Boot_95 = sprintf(
+    "[%.3f, %.3f]",
+    tbl_uni$boot_low,
+    tbl_uni$boot_high
+  ),
+  Semi_t = round(tbl_uni$t_width / 2, 3),
+  Semi_Boot = round(tbl_uni$boot_width / 2, 3)
+)
+
+kable(
+  df_uni_disp,
+  col.names = c(
+    "Variable", "n", "Media", "DE", "Asimetría",
+    "IC 95% t-Student", "IC 95% Bootstrap",
+    "Semiamplitud t", "Semiamplitud Boot"
+  ),
+  caption = paste(
+    "Tabla 1. Comparación de intervalos de confianza del 95% paramétricos",
+    "(t-Student) y no paramétricos (Bootstrap Percentil, B = 5,000) en N = 382."
+  )
+)
+```
+
+```{r}
+#| label: fig-means-forest
+#| fig-width: 11
+#| fig-height: 5.5
+#| fig-cap: "Figura 1. IC 95% (t-Student vs. Bootstrap) para la nota final"
+plots$means_forest
+```
+
+**Hallazgos principales sobre las tres variables:**
+
+1. **Rendimiento académico (`G3.mat` y `G3.por`):**
+   * En **Matemáticas**, la media muestral es de **`r fmt_num(u$g3_mat$mean, 2)`**
+     puntos, con un $\text{IC}_{95\%}$ $t$-Student de
+     **`r fmt_ci(u$g3_mat$t_low, u$g3_mat$t_high, 2)`** y un $\text{IC}_{95\%}$
+     Bootstrap de **`r fmt_ci(u$g3_mat$boot_low, u$g3_mat$boot_high, 2)`**.
+   * En **Lengua Portuguesa**, la media es sustancialmente superior
+     (**`r fmt_num(u$g3_por$mean, 2)`** puntos) y mucho más precisa: su
+     $\text{IC}_{95\%}$ $t$-Student es
+     **`r fmt_ci(u$g3_por$t_low, u$g3_por$t_high, 2)`** (semiamplitud de apenas
+     $\pm `r fmt_num(u$g3_por$t_half, 2)`$ puntos frente a
+     $\pm `r fmt_num(u$g3_mat$t_half, 2)`$ en Matemáticas).
+   * Al evaluar la **diferencia pareada intra-sujeto**
+     ($d_i = \text{G3}_{\text{por},i} - \text{G3}_{\text{mat},i}$), los
+     estudiantes obtienen en promedio **`r fmt_num(f$paired_g3$mean, 2)` puntos
+     más en Portugués que en Matemáticas**, con un $\text{IC}_{95\%}$ $t$
+     pareado de **`r fmt_ci(f$paired_g3$t_low, f$paired_g3$t_high, 2)`**
+     (Bootstrap: **`r fmt_ci(f$paired_g3$boot_low, f$paired_g3$boot_high, 2)`**),
+     intervalo que queda completamente por encima de $0$.
+
+2. **Inasistencias escolares (`absences.mat` y `absences.por`):**
+   * En **Matemáticas**, el promedio es de **`r fmt_num(u$abs_mat$mean, 2)`**
+     faltas ($\text{IC}_{95\%}$ $t$:
+     **`r fmt_ci(u$abs_mat$t_low, u$abs_mat$t_high, 2)`**; Bootstrap:
+     **`r fmt_ci(u$abs_mat$boot_low, u$abs_mat$boot_high, 2)`**).
+   * En **Portugués**, el promedio es menor (**`r fmt_num(u$abs_por$mean, 2)`**
+     faltas; $\text{IC}_{95\%}$ $t$:
+     **`r fmt_ci(u$abs_por$t_low, u$abs_por$t_high, 2)`**; Bootstrap:
+     **`r fmt_ci(u$abs_por$boot_low, u$abs_por$boot_high, 2)`**). Los dos
+     intervalos de asignaturas no se solapan entre sí, confirmando mayor
+     ausentismo medio en Matemáticas.
+
+3. **Consumo de alcohol de fin de semana (`Walc`):**
+   * Tratado como índice cuantitativo en escala de 1 a 5, presenta una media de
+     **`r fmt_num(u$walc$mean, 2)`**, con $\text{IC}_{95\%}$ $t$-Student de
+     **`r fmt_ci(u$walc$t_low, u$walc$t_high, 2)`** y Bootstrap de
+     **`r fmt_ci(u$walc$boot_low, u$walc$boot_high, 2)`**, ubicando el consumo
+     promedio poblacional entre niveles bajo y moderado.
+
+# Efecto de la asimetría extrema: ¿Cuándo importa usar Bootstrap?
+
+Una pregunta fundamental de la Unidad 3 es por qué los intervalos $t$-Student y
+Bootstrap resultan tan parecidos en nuestra tabla anterior a pesar de que las
+inasistencias tienen una asimetría extrema ($`r fmt_num(u$abs_mat$skewness, 2)`$
+en Matemáticas, con casos de hasta 75 faltas).
+
+```{r}
+#| label: fig-bootstrap-dist
+#| fig-width: 11
+#| fig-height: 5.2
+#| fig-cap: "Figura 2. Distribución Bootstrap en inasistencias (B = 5,000)"
+plots$bootstrap_dist
+```
+
+La **Figura 2** ilustra dos fenómenos estadísticos clave:
+
+1. **Acción del Teorema Central del Límite (TCL) con $N = 382$:** Aunque la
+   variable original `absences` es fuertemente asimétrica y discreta, la
+   distribución de la **media muestral** $\bar{X}^*$ en las $5{,}000$ réplicas
+   Bootstrap adopta una forma acampanada muy cercana a la normal teórica. Con
+   $N = 382$, el tamaño muestral amortigua gran parte de la asimetría.
+2. **Diferencias mínimas entre ambos intervalos:** En `absences.mat`, el
+   intervalo Bootstrap **`r fmt_ci(u$abs_mat$boot_low, u$abs_mat$boot_high, 3)`**
+   queda apenas a la derecha del intervalo $t$-Student
+   **`r fmt_ci(u$abs_mat$t_low, u$abs_mat$t_high, 3)`**: el límite inferior pasa
+   de $`r fmt_num(u$abs_mat$t_low, 3)`$ a $`r fmt_num(u$abs_mat$boot_low, 3)`$ y
+   el superior de $`r fmt_num(u$abs_mat$t_high, 3)`$ a
+   $`r fmt_num(u$abs_mat$boot_high, 3)`$. La dirección es la esperada ante una
+   cola derecha, pero la magnitud es de centésimas, del mismo orden que el error
+   de simulación Monte Carlo de un percentil con $B = `r f$cohort$n_boot`$
+   ($\approx `r fmt_num(f$mc_error$abs_mat_lower, 3)`$). Además, el error
+   estándar es prácticamente idéntico ($`r fmt_num(u$abs_mat$se, 3)`$ con $t$ y
+   $`r fmt_num(f$univariate_table$boot_se[f$univariate_table$variable == "absences.mat"], 3)`$
+   con Bootstrap). **Conclusión:** con $N = 382$ la asimetría no invalida el
+   intervalo clásico; el Bootstrap funciona como verificación y lo confirma. En
+   muestras pequeñas la aproximación normal es menos fiable y comparar ambos
+   métodos se vuelve más informativo.
+
+# Inferencia de dos muestras: Consumo de alcohol y zona de residencia
+
+En la Unidad 2 observamos diferencias descriptivas entre grupos. Ahora usamos
+intervalos de confianza del 95% para la **diferencia de medias** ($\mu_1 - \mu_2$)
+con el fin de determinar si esas brechas se sostienen al inferir hacia la
+población. Si el intervalo de confianza del 95% para $\mu_1 - \mu_2$ **no
+incluye el $0$**, existe evidencia estadística al 95% de una diferencia real
+entre los grupos; si **incluye el $0$**, la diferencia observada es compatible
+con el azar muestral.
+
+```{r}
+#| label: tbl-contrasts
+build_contrast_row <- function(label, obj) {
+  data.frame(
+    Contraste = label,
+    Grupo_1 = sprintf("%d (%.2f)", obj$n1, obj$mean1),
+    Grupo_2 = sprintf("%d (%.2f)", obj$n2, obj$mean2),
+    Diferencia = round(obj$diff, 3),
+    IC_Welch_95 = sprintf("[%.3f, %.3f]", obj$welch_low, obj$welch_high),
+    IC_Boot_95 = sprintf("[%.3f, %.3f]", obj$boot_low, obj$boot_high),
+    Excluye_Cero = ifelse(
+      obj$excludes_zero,
+      "Sí (Brecha clara)",
+      "No (Incierto)"
+    )
+  )
+}
+
+df_contrasts <- rbind(
+  build_contrast_row(
+    "Alcohol Alto (4-5) - Bajo (1-2): Nota G3 Portugués",
+    c_alc$g3_por
+  ),
+  build_contrast_row(
+    "Alcohol Alto (4-5) - Bajo (1-2): Nota G3 Matemáticas",
+    c_alc$g3_mat
+  ),
+  build_contrast_row(
+    "Alcohol Alto (4-5) - Bajo (1-2): Faltas Matemáticas",
+    c_alc$abs_mat
+  ),
+  build_contrast_row(
+    "Alcohol Alto (4-5) - Bajo (1-2): Faltas Portugués",
+    c_alc$abs_por
+  ),
+  build_contrast_row(
+    "Zona Rural - Urbana: Nota G3 Portugués",
+    c_addr$g3_por
+  ),
+  build_contrast_row(
+    "Zona Rural - Urbana: Nota G3 Matemáticas",
+    c_addr$g3_mat
+  )
+)
+
+kable(
+  df_contrasts,
+  col.names = c(
+    "Contraste (Grupo 1 - Grupo 2)",
+    "n1 (Media 1)", "n2 (Media 2)", "Dif. (G1 - G2)",
+    "IC 95% Welch", "IC 95% Bootstrap", "¿Excluye el 0?"
+  ),
+  caption = paste(
+    "Tabla 2. Intervalos de confianza del 95% (Welch y Bootstrap) para",
+    "diferencias de medias por consumo de alcohol y zona de residencia."
+  )
+)
+```
+
+```{r}
+#| label: fig-contrasts
+#| fig-width: 11
+#| fig-height: 5.5
+#| fig-cap: "Figura 3. IC 95% para diferencias de medias por consumo de alcohol"
+plots$contrasts
+```
+
+**Interpretación de los contrastes de dos muestras:**
+
+* **Consumo de alcohol y calificaciones (`G3`):**
+  * En **Portugués**, los estudiantes con consumo de alcohol alto (`Walc` 4–5,
+    $n = `r c_alc$g3_por$n1`$) tienen en promedio
+    **`r fmt_num(abs(c_alc$g3_por$diff), 2)` puntos menos** que quienes reportan
+    consumo bajo (`Walc` 1–2, $n = `r c_alc$g3_por$n2`$). Tanto el intervalo de
+    Welch (**`r fmt_ci(c_alc$g3_por$welch_low, c_alc$g3_por$welch_high, 2)`**)
+    como el Bootstrap
+    (**`r fmt_ci(c_alc$g3_por$boot_low, c_alc$g3_por$boot_high, 2)`**) quedan
+    íntegramente por debajo de cero: **la brecha negativa es estadísticamente
+    clara**.
+  * En **Matemáticas**, en cambio, la diferencia puntual es de apenas
+    **`r fmt_num(c_alc$g3_mat$diff, 2)` puntos** y su intervalo del 95%
+    (**`r fmt_ci(c_alc$g3_mat$welch_low, c_alc$g3_mat$welch_high, 2)`**) cruza
+    ampliamente el cero. Por tanto, **no hay evidencia estadística** de una
+    diferencia de medias en la nota de Matemáticas entre ambos grupos de consumo.
+* **Consumo de alcohol e inasistencias (`absences`):**
+  * Aquí se revela un hallazgo clave al integrar la tercera variable: aunque en
+    Matemáticas la nota media no mostraba diferencia concluyente por alcohol,
+    las **inasistencias sí son mayores en el grupo de consumo alto**. Quienes tienen
+    consumo alto registran **`r fmt_num(c_alc$abs_mat$diff, 2)` faltas más en
+    Matemáticas** (Welch:
+    **`r fmt_ci(c_alc$abs_mat$welch_low, c_alc$abs_mat$welch_high, 2)`**;
+    Bootstrap:
+    **`r fmt_ci(c_alc$abs_mat$boot_low, c_alc$abs_mat$boot_high, 2)`**) y
+    **`r fmt_num(c_alc$abs_por$diff, 2)` faltas más en Portugués** (Welch:
+    **`r fmt_ci(c_alc$abs_por$welch_low, c_alc$abs_por$welch_high, 2)`**).
+    Welch y Bootstrap llegan a la misma conclusión en ambas materias, aun con
+    un grupo de consumo alto de solo $n_1 = `r c_alc$abs_mat$n1`$.
+* **Brecha Urbano–Rural (`address`):**
+  * En **Portugués**, los estudiantes rurales ($n = `r c_addr$g3_por$n1`$)
+    obtienen en promedio **`r fmt_num(abs(c_addr$g3_por$diff), 2)` puntos menos**
+    que los urbanos ($n = `r c_addr$g3_por$n2`$), con un $\text{IC}_{95\%}$ de
+    Welch de **`r fmt_ci(c_addr$g3_por$welch_low, c_addr$g3_por$welch_high, 2)`**
+    que excluye el cero.
+  * En **Matemáticas**, la diferencia de **`r fmt_num(c_addr$g3_mat$diff, 2)`
+    puntos** presenta un $\text{IC}_{95\%}$ de Welch de
+    **`r fmt_ci(c_addr$g3_mat$welch_low, c_addr$g3_mat$welch_high, 2)`**, que
+    roza e incluye ligeramente el cero, por lo que la evidencia es limítrofe.
+
+# Inferencia sobre proporciones de aprobación y razón de varianzas
+
+Para completar todos los escenarios de inferencia de la Unidad 3 (proporciones
+poblacionales, diferencia de proporciones y cociente de varianzas), analizamos
+la tasa de aprobación ($G3 \ge 10$ sobre 20) y la dispersión relativa entre
+asignaturas.
+
+```{r}
+#| label: tbl-proportions-variances
+df_prop <- data.frame(
+  Parametro = c(
+    "Proporción aprobación Matemáticas (G3 >= 10)",
+    "Proporción aprobación Portugués (G3 >= 10)",
+    "Diferencia de proporciones pareada (Matemáticas - Portugués)",
+    "Razón de varianzas en notas (Var Mat / Var Por)",
+    "Razón de varianzas en faltas (Var Mat / Var Por)"
+  ),
+  Estimacion = c(
+    pct(pr$pass_mat$prop, 1),
+    pct(pr$pass_por$prop, 1),
+    paste0(fmt_num(100 * pr$diff_pass$diff, 1), " pp"),
+    fmt_num(vr$g3$ratio, 2),
+    fmt_num(vr$absences$ratio, 2)
+  ),
+  IC_Principal_95 = c(
+    sprintf(
+      "[%.1f%%, %.1f%%] (Wald)",
+      100 * pr$pass_mat$wald_low,
+      100 * pr$pass_mat$wald_high
+    ),
+    sprintf(
+      "[%.1f%%, %.1f%%] (Wald)",
+      100 * pr$pass_por$wald_low,
+      100 * pr$pass_por$wald_high
+    ),
+    sprintf(
+      "[%.1f, %.1f] pp (Wald pareado)",
+      100 * pr$diff_pass$ci_low,
+      100 * pr$diff_pass$ci_high
+    ),
+    sprintf(
+      "[%.2f, %.2f] (Bootstrap pareado)",
+      vr$g3$ci_low,
+      vr$g3$ci_high
+    ),
+    sprintf(
+      "[%.2f, %.2f] (Bootstrap pareado)",
+      vr$absences$ci_low,
+      vr$absences$ci_high
+    )
+  ),
+  IC_Alternativo_95 = c(
+    sprintf(
+      "[%.1f%%, %.1f%%] (Wilson)",
+      100 * pr$pass_mat$wilson_low,
+      100 * pr$pass_mat$wilson_high
+    ),
+    sprintf(
+      "[%.1f%%, %.1f%%] (Wilson)",
+      100 * pr$pass_por$wilson_low,
+      100 * pr$pass_por$wilson_high
+    ),
+    sprintf(
+      "Excluye 0 (%d aprueban solo Por. vs. %d solo Mat.)",
+      pr$diff_pass$n01, pr$diff_pass$n10
+    ),
+    "Excluye 1 (mayor dispersión en Mat.)",
+    "Excluye 1 (mayor dispersión en Mat.)"
+  )
+)
+
+kable(
+  df_prop,
+  col.names = c(
+    "Parámetro Poblacional", "Estimación Puntual",
+    "IC 95% Clásico", "IC 95% Alternativo / Interpretación"
+  ),
+  caption = paste(
+    "Tabla 3. Intervalos de confianza del 95% para proporciones de aprobación",
+    "(Wald y Wilson), diferencia pareada de proporciones y razón de",
+    "varianzas (Bootstrap pareado: mismos estudiantes en ambas materias)."
+  )
+)
+```
+
+```{r}
+#| label: fig-proportions
+#| fig-width: 10.5
+#| fig-height: 4.8
+#| fig-cap: "Figura 4. Proporción de aprobación (G3 >= 10) con IC 95%"
+plots$proportions
+```
+
+* **Aprobación académica ($p$ y $p_{\text{mat}} - p_{\text{por}}$):** Mientras
+  que en Lengua Portuguesa aprueba el **`r pct(pr$pass_por$prop, 1)`** de la
+  cohorte (`r pr$pass_por$k` de `r pr$pass_por$n`; $\text{IC}_{95\%}$ Wald:
+  **`r pct(pr$pass_por$wald_low, 1)` a `r pct(pr$pass_por$wald_high, 1)`**), en
+  Matemáticas aprueba el **`r pct(pr$pass_mat$prop, 1)`** (`r pr$pass_mat$k` de
+  `r pr$pass_mat$n`; $\text{IC}_{95\%}$ Wald:
+  **`r pct(pr$pass_mat$wald_low, 1)` a `r pct(pr$pass_mat$wald_high, 1)`**). La
+  diferencia de proporciones es de **`r fmt_num(100 * pr$diff_pass$diff, 1)`
+  puntos porcentuales**, con un $\text{IC}_{95\%}$ de
+  **`r fmt_ci(100 * pr$diff_pass$ci_low, 100 * pr$diff_pass$ci_high, 1)` pp**.
+  Como son los **mismos estudiantes** en ambas materias, el intervalo es
+  **pareado**: su varianza depende de los casos discordantes
+  (`r pr$diff_pass$n01` aprueban solo Portugués y `r pr$diff_pass$n10` solo
+  Matemáticas), no de dos muestras independientes.
+* **Razón de varianzas ($\sigma^2_{\text{mat}} / \sigma^2_{\text{por}}$):** El
+  cociente de varianzas en las calificaciones finales es de
+  **`r fmt_num(vr$g3$ratio, 2)`**. El intervalo clásico $F$ de Snedecor no es
+  adecuado aquí: supone muestras **independientes** y **normales**, y en
+  cambio las notas son pareadas (mismos estudiantes) y `G3.mat` no es normal.
+  Por eso usamos un **Bootstrap pareado** (remuestreando estudiantes
+  completos), que da un $\text{IC}_{95\%}$ de
+  **`r fmt_ci(vr$g3$ci_low, vr$g3$ci_high, 2)`** (el $F$ habría dado un
+  intervalo más estrecho,
+  `r fmt_ci(vr$g3_f_independent$ci_low, vr$g3_f_independent$ci_high, 2)`).
+  El intervalo excluye el $1$: la varianza de Matemáticas es mayor, unas
+  `r fmt_num(vr$g3$ratio, 1)` veces la de Portugués, aunque los datos no
+  permiten afirmar con 95% de confianza que sea más del doble. Esa mayor
+  dispersión explica por qué los intervalos de Matemáticas son más anchos.
+
+# Conclusiones y recomendaciones
+
+1. **Integración de las tres variables (`G3`, `absences`, `Walc`):** Mirar
+   únicamente la nota final de Matemáticas no permite concluir nada sobre el
+   consumo alto de alcohol (`Walc` 4–5): su $\text{IC}_{95\%}$ para
+   $\Delta G3_{\text{mat}}$ incluye el cero
+   (`r fmt_ci(c_alc$g3_mat$welch_low, c_alc$g3_mat$welch_high, 2)`), lo que
+   significa evidencia **no concluyente**, no ausencia de diferencia. Al incluir
+   las inasistencias y la segunda asignatura, encontramos que el consumo alto de
+   alcohol se asocia con **`r fmt_num(c_alc$abs_mat$diff, 2)` faltas adicionales
+   en Matemáticas** (`r fmt_ci(c_alc$abs_mat$welch_low, c_alc$abs_mat$welch_high, 2)`),
+   **`r fmt_num(c_alc$abs_por$diff, 2)` faltas adicionales en Portugués** y una
+   nota de Portugués **`r fmt_num(abs(c_alc$g3_por$diff), 2)` puntos menor**
+   (`r fmt_ci(c_alc$g3_por$welch_low, c_alc$g3_por$welch_high, 2)`). Las tres
+   señales se mantienen aun corrigiendo por comparaciones múltiples (Bonferroni
+   para 4 contrastes: el mayor $p$ es
+   `r fmt_num(f$alcohol_max_p, 4)` $< 0.0125$).
+2. **Complementariedad entre métodos paramétricos y Bootstrap:** Con $N = 382$,
+   el Teorema Central del Límite hace que los intervalos $t$-Student y Bootstrap
+   coincidan prácticamente en todas las variables. Incluso en `absences`, con
+   asimetría extrema, el Bootstrap Percentil ($B = 5{,}000$) solo mueve los
+   límites unas centésimas, del orden del error de simulación: su aporte aquí
+   es **confirmar** que el intervalo clásico es confiable sin depender del
+   supuesto de normalidad.
+3. **Límites del estudio:** (a) la muestra proviene de **dos colegios
+   portugueses**, por lo que la población de referencia es acotada; (b) solo
+   incluye a quienes cursan **ambas materias** ($N = 382$), un posible sesgo de
+   selección; (c) el consumo de alcohol es **autorreportado** y puede estar
+   subdeclarado; (d) es un **corte transversal**, sin seguimiento en el tiempo;
+   (e) `Walc` es una escala **ordinal**, por lo que su media es una
+   aproximación; y (f) `G3.mat` tiene `r sum(res$merged$G3.mat == 0)` notas en
+   cero, posibles abandonos que no equivalen a un desempeño evaluado.
+4. **Alcance y cautela metodológica:** Los intervalos de confianza cuantifican
+   la **incertidumbre muestral**, pero no corrigen el sesgo por variables de
+   confusión en estudios observacionales. Las brechas detectadas deben emplearse
+   como **alertas tempranas de acompañamiento pedagógico** (especialmente frente
+   al ausentismo y la reprobación en Matemáticas) y nunca como etiquetas
+   deterministas en sistemas de Inteligencia Artificial.
+
+# Referencias {#referencias}
+
+* Cortez, P., & Silva, A. M. G. (2008). *Using data mining to predict secondary
+  school student performance*. En A. Brito & J. Teixeira (Eds.), *Proceedings of
+  5th Annual Future Business Technology Conference (FUBUTEC 2008)* (pp. 5–12).
+  EUROSIS. Dataset disponible en UCI Machine Learning Repository:
+  <https://archive.ics.uci.edu/dataset/320/student+performance>.
+* Efron, B., & Tibshirani, R. J. (1993). *An Introduction to the Bootstrap*.
+  Chapman & Hall/CRC.
+* Moore, D. S., McCabe, G. P., & Craig, B. A. (2021). *Introduction to the
+  Practice of Statistics* (10th ed.). W. H. Freeman.
+* Welch, B. L. (1947). The generalization of "Student's" problem when several
+  different population variances are involved. *Biometrika*, 34(1–2), 28–35.
+* Wilson, E. B. (1927). Probable inference, the law of succession, and
+  statistical inference. *Journal of the American Statistical Association*,
+  22(158), 209–212.

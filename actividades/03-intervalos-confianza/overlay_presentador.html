@@ -1,0 +1,1172 @@
+<!-- ==========================================================================
+     HUD del Presentador: Cronómetro (2:30 / 150s) + Cámara Flotante PiP
+     + Divisor Interactivo Drag & Drop para Speaker View de Reveal.js (U3)
+     ========================================================================== -->
+
+<div id="presentador-hud">
+
+  <!-- ==================== CRONÓMETRO HUD (Solo en zona blanca Speaker View) ==================== -->
+  <div id="cronometro-hud">
+    <div id="cronometro-main">
+      <div id="cronometro-tiempo" title="Clic para Iniciar/Pausar (Límite: 2:30)">0:00</div>
+      <div id="cronometro-meta">/ 2:30</div>
+      <div id="cronometro-acciones">
+        <button id="btn-cronometro-toggle" class="hud-btn" title="Iniciar/Pausar (Atajo: T)">▶</button>
+        <button id="btn-cronometro-reset" class="hud-btn" title="Reiniciar (Atajo: Y)">↺</button>
+      </div>
+    </div>
+    <!-- Barra de progreso visual del límite de 150 segundos (2.5 min) -->
+    <div id="cronometro-progreso-track">
+      <div id="cronometro-progreso-fill"></div>
+    </div>
+    <div id="cronometro-shortcuts">T: Pausa/Play &bull; Y: Reset &bull; C: Cámara &bull; +/-: Zoom Cam</div>
+  </div>
+
+  <!-- ==================== CÁMARA FLOTANTE PIP (Solo en lado presentación) ==================== -->
+  <div id="camara-box" class="cam-rect">
+    <div class="cam-resizer cam-resizer-tl" data-corner="tl" title="Arrastrar para redimensionar (doble clic: tamaño por defecto)"></div>
+    <div class="cam-resizer cam-resizer-tr" data-corner="tr" title="Arrastrar para redimensionar (doble clic: tamaño por defecto)"></div>
+    <div class="cam-resizer cam-resizer-bl" data-corner="bl" title="Arrastrar para redimensionar (doble clic: tamaño por defecto)"></div>
+    <div class="cam-resizer cam-resizer-br" data-corner="br" title="Arrastrar para redimensionar (doble clic: tamaño por defecto)"></div>
+
+    <div id="camara-header">
+      <div id="camara-drag-handle">
+        <span class="cam-icon">📹</span>
+        <span class="cam-title">Cámara</span>
+      </div>
+      <div id="camara-tools">
+        <button id="btn-cam-shape" class="cam-tool-btn" title="Alternar rectángulo / círculo (Atajo: O)">⬭</button>
+        <button id="btn-cam-mirror" class="cam-tool-btn active" title="Modo espejo (Atajo: M)">⇋</button>
+        <button id="btn-cam-toggle" class="cam-tool-btn" title="Minimizar / Ocultar cámara (Atajo: C)">✕</button>
+      </div>
+    </div>
+
+    <div id="camara-view">
+      <video id="webcam-video" autoplay playsinline muted></video>
+      <div id="camara-status-overlay">
+        <div id="camara-status-icon">📷</div>
+        <div id="camara-status-msg">Cámara en espera</div>
+        <button id="btn-cam-start" class="btn-primary-cam">Encender Cámara</button>
+        <div id="camara-insecure-hint" style="display: none;">
+          <p>Chrome bloquea la cámara en enlaces <code>file:///</code> por seguridad.</p>
+          <p>Para activar tu cámara, ejecutá en terminal:<br/><code>quarto preview actividades/03-intervalos-confianza/presentacion.qmd</code></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== ESTILOS DEL OVERLAY ==================== -->
+<style id="presentador-hud-styles">
+  #presentador-hud {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 99999;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  /* Por defecto el cronómetro permanece oculto del lado de la presentación;
+     solo se activa al montarse dentro de la zona blanca (#speaker-controls) */
+  #cronometro-hud {
+    display: none;
+    pointer-events: auto;
+    background: rgba(10, 15, 29, 0.94);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1.5px solid rgba(56, 189, 248, 0.45);
+    border-radius: 12px;
+    padding: 8px 18px;
+    box-shadow: 0 6px 24px rgba(15, 23, 42, 0.25);
+    flex-direction: column;
+    align-items: center;
+    user-select: none;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  #cronometro-hud.en-zona-blanca {
+    display: flex;
+    margin: 8px 12px 6px 12px;
+  }
+
+  #cronometro-main {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  #cronometro-tiempo {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: #38bdf8;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: color 0.3s ease;
+  }
+
+  #cronometro-meta {
+    font-size: 14px;
+    font-weight: 600;
+    color: #94a3b8;
+  }
+
+  #cronometro-acciones {
+    display: flex;
+    gap: 6px;
+    margin-left: 8px;
+  }
+
+  .hud-btn {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #cbd5e1;
+    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .hud-btn:hover {
+    background: #0284c7;
+    border-color: #38bdf8;
+    color: #ffffff;
+  }
+
+  #cronometro-progreso-track {
+    width: 100%;
+    height: 5px;
+    background: #1e293b;
+    border-radius: 3px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+
+  #cronometro-progreso-fill {
+    width: 0%;
+    height: 100%;
+    background: #38bdf8;
+    transition: width 0.25s linear, background-color 0.3s ease;
+  }
+
+  #cronometro-shortcuts {
+    font-size: 10.5px;
+    color: #94a3b8;
+    letter-spacing: 0.03em;
+    margin-top: 5px;
+  }
+
+  #cronometro-hud.estado-amber {
+    border-color: #f59e0b;
+    box-shadow: 0 8px 28px rgba(245, 158, 11, 0.3);
+  }
+  #cronometro-hud.estado-amber #cronometro-tiempo {
+    color: #fbbf24;
+  }
+  #cronometro-hud.estado-amber #cronometro-progreso-fill {
+    background: #f59e0b;
+  }
+
+  #cronometro-hud.estado-rojo {
+    border-color: #f43f5e;
+    box-shadow: 0 8px 28px rgba(244, 63, 94, 0.4);
+    animation: pulso-limite 1.2s infinite ease-in-out;
+  }
+  #cronometro-hud.estado-rojo #cronometro-tiempo {
+    color: #f43f5e;
+  }
+  #cronometro-hud.estado-rojo #cronometro-progreso-fill {
+    background: #f43f5e;
+  }
+
+  @keyframes pulso-limite {
+    0%, 100% { border-color: #f43f5e; }
+    50% { border-color: rgba(244, 63, 94, 0.3); }
+  }
+
+  #camara-box {
+    position: absolute;
+    bottom: 28px;
+    right: 28px;
+    pointer-events: auto;
+    background: #090d16;
+    border: 2px solid #38bdf8;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.85), 0 0 20px rgba(56, 189, 248, 0.25);
+    overflow: hidden;
+    user-select: none;
+    box-sizing: border-box;
+  }
+
+  #camara-box.cam-rect {
+    width: 290px;
+    height: 195px;
+    border-radius: 14px;
+  }
+
+  #camara-box.cam-circle {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+  }
+
+  .cam-resizer {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    z-index: 50;
+    pointer-events: auto;
+    opacity: 0.5;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  #camara-box:hover .cam-resizer {
+    opacity: 0.9;
+  }
+
+  .cam-resizer:hover {
+    opacity: 1 !important;
+    transform: scale(1.3);
+  }
+
+  .cam-resizer-br {
+    bottom: 0;
+    right: 0;
+    cursor: nwse-resize;
+    border-right: 3px solid #38bdf8;
+    border-bottom: 3px solid #38bdf8;
+    border-bottom-right-radius: 12px;
+  }
+
+  .cam-resizer-bl {
+    bottom: 0;
+    left: 0;
+    cursor: nesw-resize;
+    border-left: 3px solid #38bdf8;
+    border-bottom: 3px solid #38bdf8;
+    border-bottom-left-radius: 12px;
+  }
+
+  .cam-resizer-tr {
+    top: 0;
+    right: 0;
+    cursor: nesw-resize;
+    border-right: 3px solid #38bdf8;
+    border-top: 3px solid #38bdf8;
+    border-top-right-radius: 12px;
+  }
+
+  .cam-resizer-tl {
+    top: 0;
+    left: 0;
+    cursor: nwse-resize;
+    border-left: 3px solid #38bdf8;
+    border-top: 3px solid #38bdf8;
+    border-top-left-radius: 12px;
+  }
+
+  .cam-resizer-br::after {
+    content: "";
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    width: 5px;
+    height: 5px;
+    background: #38bdf8;
+    border-radius: 50%;
+    box-shadow: 0 0 6px #38bdf8;
+  }
+
+  #camara-header {
+    height: 28px;
+    background: rgba(15, 23, 42, 0.95);
+    border-bottom: 1px solid #1e293b;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px;
+    cursor: grab;
+  }
+
+  #camara-header:active {
+    cursor: grabbing;
+  }
+
+  #camara-box.cam-circle #camara-header {
+    display: none;
+  }
+
+  #camara-drag-handle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  #camara-tools {
+    display: flex;
+    gap: 4px;
+    position: relative;
+    z-index: 60;
+  }
+
+  .cam-tool-btn {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: color 0.2s ease, background 0.2s ease;
+  }
+
+  .cam-tool-btn:hover {
+    color: #38bdf8;
+    background: #1e293b;
+  }
+
+  .cam-tool-btn.active {
+    color: #38bdf8;
+  }
+
+  #camara-view {
+    position: relative;
+    width: 100%;
+    height: calc(100% - 28px);
+    background: #020617;
+    overflow: hidden;
+  }
+
+  #camara-box.cam-circle #camara-view {
+    height: 100%;
+  }
+
+  #webcam-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transform: scaleX(-1);
+    transition: transform 0.2s ease;
+  }
+
+  #webcam-video.sin-espejo {
+    transform: scaleX(1);
+  }
+
+  #camara-status-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #090d16;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    text-align: center;
+  }
+
+  #camara-status-icon {
+    font-size: 26px;
+    margin-bottom: 6px;
+  }
+
+  #camara-status-msg {
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+    margin-bottom: 8px;
+  }
+
+  .btn-primary-cam {
+    background: #0284c7;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  .btn-primary-cam:hover {
+    background: #38bdf8;
+  }
+
+  #camara-insecure-hint {
+    margin-top: 6px;
+    font-size: 10px;
+    line-height: 1.3;
+    color: #cbd5e1;
+    background: rgba(244, 63, 94, 0.15);
+    border: 1px solid rgba(244, 63, 94, 0.4);
+    border-radius: 6px;
+    padding: 6px 8px;
+  }
+
+  #camara-insecure-hint code {
+    color: #f43f5e;
+    font-weight: 700;
+  }
+</style>
+
+<!-- ==================== LÓGICA JAVASCRIPT ==================== -->
+<script>
+  (function () {
+    const search = window.location.search || "";
+    const esReceiver = /receiver/i.test(search);
+    const esCurrentSlideSpeaker = esReceiver && /postMessageEvents=true/i.test(search);
+    const TECLAS_HUD = ["t", "y", "c", "m", "+", "=", "-", "_"];
+
+    const hudRoot = document.getElementById("presentador-hud");
+
+    // -------------------------------------------------------------
+    // 0. IFRAMES DEL SPEAKER VIEW (current / upcoming):
+    //    Sin cronómetro ni cámara (evita una segunda cámara y un HUD duplicado).
+    //    El HUD lo monta la ventana principal dentro del popup (ver sección 2).
+    //    En el iframe actual solo se reenvían los atajos al popup.
+    // -------------------------------------------------------------
+    if (esReceiver) {
+      if (hudRoot) hudRoot.style.display = "none";
+      if (esCurrentSlideSpeaker) {
+        document.addEventListener("keydown", function (ev) {
+          const tecla = (ev.key || "").toLowerCase();
+          if (TECLAS_HUD.indexOf(tecla) === -1) return;
+          window.parent.postMessage({ hudTecla: tecla }, "*");
+        });
+      }
+      return;
+    }
+
+    // La portada no tiene notas: Reveal ocultaría el bloque NOTES.
+    // Se agrega una nota guía para que el Speaker View nunca quede vacío.
+    const portada = document.getElementById("title-slide");
+    if (portada && !portada.querySelector("aside.notes")) {
+      const notaPortada = document.createElement("aside");
+      notaPortada.className = "notes";
+      notaPortada.innerHTML =
+        "<p><strong>Portada.</strong> Avanzá a la diapositiva 01 y presioná " +
+        "<strong>T</strong> para iniciar el cronómetro de 2:30.</p>";
+      portada.appendChild(notaPortada);
+    }
+
+    // -------------------------------------------------------------
+    // 1. CONTROL DEL CRONÓMETRO (150 segundos = 2m 30s U3)
+    // -------------------------------------------------------------
+    const META_TOTAL_SEG = 150;
+    const UMBRAL_AMBAR_SEG = 125; // 2:05
+    const UMBRAL_ROJO_SEG = 145;  // 2:25
+
+    let cronometroCorriendo = false;
+    let msAcumulados = 0;
+    let tiempoInicioMs = null;
+
+    const elHud = document.getElementById("cronometro-hud");
+    const elTiempo = document.getElementById("cronometro-tiempo");
+    const elProgreso = document.getElementById("cronometro-progreso-fill");
+    const btnToggle = document.getElementById("btn-cronometro-toggle");
+    const btnReset = document.getElementById("btn-cronometro-reset");
+
+    function formatearTiempo(segundosTotales) {
+      const min = Math.floor(segundosTotales / 60);
+      const seg = Math.floor(segundosTotales % 60);
+      return min + ":" + (seg < 10 ? "0" + seg : seg);
+    }
+
+    function actualizarCronometro() {
+      let transcurridoMs = msAcumulados;
+      if (cronometroCorriendo && tiempoInicioMs !== null) {
+        transcurridoMs += (Date.now() - tiempoInicioMs);
+      }
+      const transcurridoSeg = transcurridoMs / 1000;
+      elTiempo.textContent = formatearTiempo(transcurridoSeg);
+
+      const porcentaje = Math.min(100, (transcurridoSeg / META_TOTAL_SEG) * 100);
+      elProgreso.style.width = porcentaje + "%";
+
+      elHud.classList.remove("estado-amber", "estado-rojo");
+      if (transcurridoSeg >= UMBRAL_ROJO_SEG) {
+        elHud.classList.add("estado-rojo");
+      } else if (transcurridoSeg >= UMBRAL_AMBAR_SEG) {
+        elHud.classList.add("estado-amber");
+      }
+    }
+
+    function toggleCronometro() {
+      if (cronometroCorriendo) {
+        msAcumulados += (Date.now() - tiempoInicioMs);
+        tiempoInicioMs = null;
+        cronometroCorriendo = false;
+        btnToggle.textContent = "▶";
+      } else {
+        tiempoInicioMs = Date.now();
+        cronometroCorriendo = true;
+        btnToggle.textContent = "⏸";
+      }
+      actualizarCronometro();
+    }
+
+    function resetCronometro() {
+      cronometroCorriendo = false;
+      tiempoInicioMs = null;
+      msAcumulados = 0;
+      btnToggle.textContent = "▶";
+      actualizarCronometro();
+    }
+
+    btnToggle.addEventListener("click", toggleCronometro);
+    btnReset.addEventListener("click", resetCronometro);
+    elTiempo.addEventListener("click", toggleCronometro);
+    setInterval(actualizarCronometro, 200);
+    actualizarCronometro();
+
+    // -------------------------------------------------------------
+    // 2. MONTAJE EN SPEAKER VIEW (desde la ventana principal):
+    //    - Reveal abre el popup con window.open('about:blank'); ese popup es
+    //      accesible desde aquí tanto en file:// como en http://.
+    //    - Mover el cronómetro exclusivamente a la parte blanca (#speaker-controls)
+    //    - Agregar barras divisoras Drag & Drop para ajustar el ancho/alto de cada lado
+    // -------------------------------------------------------------
+    function leerSplit(win, clave, porDefecto) {
+      try {
+        return parseFloat(win.localStorage.getItem(clave)) || porDefecto;
+      } catch (_) {
+        return porDefecto;
+      }
+    }
+
+    function guardarSplit(win, clave, valor) {
+      try { win.localStorage.setItem(clave, String(valor)); } catch (_) {}
+    }
+
+    function configurarVentanaSpeakerView(parentWin) {
+      let parentDoc = null;
+      try {
+        parentDoc = parentWin.document;
+      } catch (err) {
+        return false;
+      }
+      if (!parentDoc || parentDoc === document) return false;
+
+      const currentSlidePane = parentDoc.getElementById("current-slide");
+      const upcomingSlidePane = parentDoc.getElementById("upcoming-slide");
+      const speakerControlsPane = parentDoc.getElementById("speaker-controls");
+      if (!currentSlidePane || !upcomingSlidePane || !speakerControlsPane) return false;
+
+      // 2A. Copiar estilos del cronómetro e inyectar estilos de los divisores (splitters)
+      if (!parentDoc.getElementById("hud-speaker-custom-styles")) {
+        const styleEl = parentDoc.createElement("style");
+        styleEl.id = "hud-speaker-custom-styles";
+        const baseCss = document.getElementById("presentador-hud-styles");
+        styleEl.textContent = (baseCss ? baseCss.textContent : "") + `
+          /* Ajuste de la zona blanca (#speaker-controls) con nuestro cronómetro arriba */
+          #speaker-controls {
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+          }
+          #speaker-controls .speaker-controls-time {
+            display: none !important;
+          }
+          #speaker-controls .speaker-controls-notes {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 16px 16px 16px !important;
+          }
+          #hud-white-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 14px;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
+            flex-shrink: 0;
+          }
+          #hud-white-header #cronometro-hud.en-zona-blanca {
+            margin: 0;
+            flex: 1;
+          }
+          /* Divisor vertical Drag & Drop (ancho de cada lado) */
+          #custom-v-splitter {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 60%;
+            width: 12px;
+            margin-left: -6px;
+            cursor: col-resize;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            transition: background 0.15s ease;
+          }
+          #custom-v-splitter::before {
+            content: "";
+            width: 4px;
+            height: 56px;
+            border-radius: 4px;
+            background: rgba(56, 189, 248, 0.55);
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+            transition: all 0.15s ease;
+          }
+          #custom-v-splitter:hover,
+          #custom-v-splitter.activo {
+            background: rgba(56, 189, 248, 0.18);
+          }
+          #custom-v-splitter:hover::before,
+          #custom-v-splitter.activo::before {
+            width: 6px;
+            height: 84px;
+            background: #0284c7;
+            box-shadow: 0 0 12px rgba(2, 132, 199, 0.8);
+          }
+          /* Divisor horizontal Drag & Drop (alto entre Upcoming y zona blanca) */
+          #custom-h-splitter {
+            position: absolute;
+            top: 40%;
+            left: 60%;
+            width: 40%;
+            height: 10px;
+            margin-top: -5px;
+            cursor: row-resize;
+            z-index: 9998;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            transition: background 0.15s ease;
+          }
+          #custom-h-splitter::before {
+            content: "";
+            width: 48px;
+            height: 4px;
+            border-radius: 4px;
+            background: rgba(100, 116, 139, 0.45);
+            transition: all 0.15s ease;
+          }
+          #custom-h-splitter:hover,
+          #custom-h-splitter.activo {
+            background: rgba(56, 189, 248, 0.15);
+          }
+          #custom-h-splitter:hover::before,
+          #custom-h-splitter.activo::before {
+            width: 72px;
+            height: 5px;
+            background: #0284c7;
+          }
+          /* Escudo transparente durante el arrastre para que los iframes no capturen el mouse */
+          #custom-splitter-shield {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 99999;
+            display: none;
+          }
+        `;
+        parentDoc.head.appendChild(styleEl);
+      }
+
+      // 2B. Mover #cronometro-hud dentro de la parte blanca (#speaker-controls)
+      let whiteHeader = parentDoc.getElementById("hud-white-header");
+      if (!whiteHeader) {
+        whiteHeader = parentDoc.createElement("div");
+        whiteHeader.id = "hud-white-header";
+        speakerControlsPane.insertBefore(whiteHeader, speakerControlsPane.firstChild);
+      }
+      const oldCrono = parentDoc.getElementById("cronometro-hud");
+      if (oldCrono && oldCrono !== elHud) {
+        oldCrono.remove();
+      }
+      elHud.classList.add("en-zona-blanca");
+      whiteHeader.appendChild(elHud);
+
+      // 2C. Crear divisores Drag & Drop para redimensionar el ancho de cada lado (y el alto derecho)
+      if (!parentDoc.getElementById("custom-v-splitter")) {
+        const vSplitter = parentDoc.createElement("div");
+        vSplitter.id = "custom-v-splitter";
+        vSplitter.title = "Arrastrar con clic sostenido para cambiar el ancho de cada lado (doble clic: 60% / 40%)";
+
+        const hSplitter = parentDoc.createElement("div");
+        hSplitter.id = "custom-h-splitter";
+        hSplitter.title = "Arrastrar para ajustar altura entre vista previa y notas (doble clic: 40% / 60%)";
+
+        const shield = parentDoc.createElement("div");
+        shield.id = "custom-splitter-shield";
+
+        parentDoc.body.appendChild(vSplitter);
+        parentDoc.body.appendChild(hSplitter);
+        parentDoc.body.appendChild(shield);
+
+        let splitX = leerSplit(parentWin, "hud_split_x", 60);
+        let splitY = leerSplit(parentWin, "hud_split_y", 40);
+
+        function aplicarDimensiones(xPct, yPct) {
+          splitX = Math.max(22, Math.min(84, xPct));
+          splitY = Math.max(15, Math.min(75, yPct));
+          const rightPct = 100 - splitX;
+
+          currentSlidePane.style.width = splitX + "%";
+          currentSlidePane.style.left = "0%";
+
+          upcomingSlidePane.style.left = splitX + "%";
+          upcomingSlidePane.style.width = rightPct + "%";
+          upcomingSlidePane.style.height = splitY + "%";
+
+          speakerControlsPane.style.left = splitX + "%";
+          speakerControlsPane.style.width = rightPct + "%";
+          speakerControlsPane.style.top = splitY + "%";
+          speakerControlsPane.style.height = (100 - splitY) + "%";
+
+          vSplitter.style.left = splitX + "%";
+          hSplitter.style.top = splitY + "%";
+          hSplitter.style.left = splitX + "%";
+          hSplitter.style.width = rightPct + "%";
+        }
+
+        aplicarDimensiones(splitX, splitY);
+
+        // Arrastre del divisor vertical (ancho izquierda vs derecha)
+        let draggingV = false;
+        let draggingH = false;
+
+        vSplitter.addEventListener("mousedown", function (e) {
+          e.preventDefault();
+          draggingV = true;
+          vSplitter.classList.add("activo");
+          shield.style.display = "block";
+          shield.style.cursor = "col-resize";
+        });
+
+        hSplitter.addEventListener("mousedown", function (e) {
+          e.preventDefault();
+          draggingH = true;
+          hSplitter.classList.add("activo");
+          shield.style.display = "block";
+          shield.style.cursor = "row-resize";
+        });
+
+        parentDoc.addEventListener("mousemove", function (e) {
+          if (draggingV) {
+            const nuevoX = (e.clientX / parentWin.innerWidth) * 100;
+            aplicarDimensiones(nuevoX, splitY);
+          } else if (draggingH) {
+            const nuevoY = (e.clientY / parentWin.innerHeight) * 100;
+            aplicarDimensiones(splitX, nuevoY);
+          }
+        });
+
+        function finalizarArrastreSplit() {
+          if (!draggingV && !draggingH) return;
+          draggingV = false;
+          draggingH = false;
+          vSplitter.classList.remove("activo");
+          hSplitter.classList.remove("activo");
+          shield.style.display = "none";
+          guardarSplit(parentWin, "hud_split_x", splitX);
+          guardarSplit(parentWin, "hud_split_y", splitY);
+          parentWin.dispatchEvent(new Event("resize"));
+        }
+
+        parentDoc.addEventListener("mouseup", finalizarArrastreSplit);
+        shield.addEventListener("mouseup", finalizarArrastreSplit);
+
+        vSplitter.addEventListener("dblclick", function () {
+          aplicarDimensiones(60, splitY);
+          guardarSplit(parentWin, "hud_split_x", 60);
+          parentWin.dispatchEvent(new Event("resize"));
+        });
+
+        hSplitter.addEventListener("dblclick", function () {
+          aplicarDimensiones(splitX, 40);
+          guardarSplit(parentWin, "hud_split_y", 40);
+          parentWin.dispatchEvent(new Event("resize"));
+        });
+      }
+
+      // Escuchar atajos también cuando el foco está en la parte blanca del Speaker View
+      // y los que reenvía el iframe de la diapositiva actual (postMessage).
+      if (!parentDoc.__hudKeybound) {
+        parentDoc.__hudKeybound = true;
+        parentDoc.addEventListener("keydown", manejarAtajosTeclado);
+        parentWin.addEventListener("message", function (ev) {
+          const datos = ev.data;
+          if (datos && typeof datos.hudTecla === "string") {
+            manejarAtajosTeclado({ key: datos.hudTecla, target: null });
+          }
+        });
+      }
+      return true;
+    }
+
+    // Esperar a que Reveal escriba el Speaker View en el popup y montar el HUD.
+    function montarCuandoEsteListo(popup) {
+      let intentos = 0;
+      const temporizador = setInterval(function () {
+        intentos += 1;
+        let listo = false;
+        try {
+          listo = !popup.closed && configurarVentanaSpeakerView(popup);
+        } catch (err) {
+          console.warn("No se pudo montar el HUD en el Speaker View:", err);
+        }
+        if (listo || popup.closed || intentos > 75) clearInterval(temporizador);
+      }, 200);
+    }
+
+    const abrirVentanaOriginal = window.open;
+    window.open = function () {
+      const ventana = abrirVentanaOriginal.apply(window, arguments);
+      if (ventana && arguments[1] === "reveal.js - Notes") {
+        montarCuandoEsteListo(ventana);
+      }
+      return ventana;
+    };
+
+    // -------------------------------------------------------------
+    // 3. CONTROL DE LA CÁMARA WEB (Solo en el lado de la presentación)
+    // -------------------------------------------------------------
+    let streamCamara = null;
+    let modoEspejo = true;
+    let modoCircular = false;
+    let camaraVisible = true;
+
+    const boxCamara = document.getElementById("camara-box");
+    const videoCamara = document.getElementById("webcam-video");
+    const overlayStatus = document.getElementById("camara-status-overlay");
+    const msgStatus = document.getElementById("camara-status-msg");
+    const btnStartCam = document.getElementById("btn-cam-start");
+    const btnMirror = document.getElementById("btn-cam-mirror");
+    const btnShape = document.getElementById("btn-cam-shape");
+    const btnToggleCam = document.getElementById("btn-cam-toggle");
+    const hintInsecure = document.getElementById("camara-insecure-hint");
+
+    async function iniciarCamara() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        msgStatus.textContent = "Acceso a cámara restringido";
+        hintInsecure.style.display = "block";
+        btnStartCam.textContent = "Reintentar";
+        return;
+      }
+
+      msgStatus.textContent = "Conectando cámara...";
+      try {
+        streamCamara = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: "user"
+          },
+          audio: false
+        });
+        videoCamara.srcObject = streamCamara;
+        overlayStatus.style.display = "none";
+      } catch (err) {
+        console.warn("No se pudo iniciar la cámara automáticamente:", err);
+        msgStatus.textContent = "Cámara no disponible (" + (err.name || "Error") + ")";
+        if (window.location.protocol === "file:") {
+          hintInsecure.style.display = "block";
+        }
+      }
+    }
+
+    function toggleVisibilidadCamara() {
+      camaraVisible = !camaraVisible;
+      boxCamara.style.display = camaraVisible ? "block" : "none";
+    }
+
+    function toggleEspejo() {
+      modoEspejo = !modoEspejo;
+      if (modoEspejo) {
+        videoCamara.classList.remove("sin-espejo");
+        btnMirror.classList.add("active");
+      } else {
+        videoCamara.classList.add("sin-espejo");
+        btnMirror.classList.remove("active");
+      }
+    }
+
+    function toggleForma() {
+      modoCircular = !modoCircular;
+      if (modoCircular) {
+        boxCamara.classList.remove("cam-rect");
+        boxCamara.classList.add("cam-circle");
+        btnShape.textContent = "▭";
+        const side = Math.max(160, Math.min(boxCamara.offsetWidth, boxCamara.offsetHeight));
+        boxCamara.style.width = side + "px";
+        boxCamara.style.height = side + "px";
+      } else {
+        boxCamara.classList.remove("cam-circle");
+        boxCamara.classList.add("cam-rect");
+        btnShape.textContent = "⬭";
+        const w = Math.max(220, boxCamara.offsetWidth);
+        boxCamara.style.width = w + "px";
+        boxCamara.style.height = Math.round(w / 1.487) + "px";
+      }
+      mantenerCamaraEnLimites();
+    }
+
+    btnStartCam.addEventListener("click", iniciarCamara);
+    btnMirror.addEventListener("click", toggleEspejo);
+    btnShape.addEventListener("click", toggleForma);
+    btnToggleCam.addEventListener("click", toggleVisibilidadCamara);
+
+    if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+      iniciarCamara();
+    } else {
+      hintInsecure.style.display = "block";
+    }
+
+    // -------------------------------------------------------------
+    // 4. ARRASTRE FLOTANTE (DRAG & DROP) DE LA CÁMARA
+    // -------------------------------------------------------------
+    let arrastrando = false;
+    let posXInicio = 0, posYInicio = 0;
+    let boxLeft = 0, boxTop = 0;
+
+    const dragTarget = document.getElementById("camara-header");
+
+    function asegurarCoordenadasAbsolutas() {
+      const rect = boxCamara.getBoundingClientRect();
+      boxCamara.style.bottom = "auto";
+      boxCamara.style.right = "auto";
+      boxCamara.style.left = rect.left + "px";
+      boxCamara.style.top = rect.top + "px";
+      return rect;
+    }
+
+    function mantenerCamaraEnLimites() {
+      if (boxCamara.style.left && boxCamara.style.left !== "auto") {
+        const rect = boxCamara.getBoundingClientRect();
+        const maxLeft = Math.max(10, window.innerWidth - boxCamara.offsetWidth - 10);
+        const maxTop = Math.max(10, window.innerHeight - boxCamara.offsetHeight - 10);
+        boxCamara.style.left = Math.max(10, Math.min(maxLeft, rect.left)) + "px";
+        boxCamara.style.top = Math.max(10, Math.min(maxTop, rect.top)) + "px";
+      }
+    }
+
+    window.addEventListener("resize", mantenerCamaraEnLimites);
+
+    function empezarArrastre(e) {
+      if (e.target.closest(".cam-tool-btn") || e.target.closest(".cam-resizer")) return;
+      arrastrando = true;
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+      posXInicio = clientX;
+      posYInicio = clientY;
+
+      const rect = asegurarCoordenadasAbsolutas();
+      boxLeft = rect.left;
+      boxTop = rect.top;
+
+      document.addEventListener("mousemove", moverElemento);
+      document.addEventListener("touchmove", moverElemento, { passive: false });
+      document.addEventListener("mouseup", soltarElemento);
+      document.addEventListener("touchend", soltarElemento);
+    }
+
+    function moverElemento(e) {
+      if (!arrastrando) return;
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+      const deltaX = clientX - posXInicio;
+      const deltaY = clientY - posYInicio;
+
+      const nuevoLeft = Math.max(10, Math.min(window.innerWidth - boxCamara.offsetWidth - 10, boxLeft + deltaX));
+      const nuevoTop = Math.max(10, Math.min(window.innerHeight - boxCamara.offsetHeight - 10, boxTop + deltaY));
+
+      boxCamara.style.left = nuevoLeft + "px";
+      boxCamara.style.top = nuevoTop + "px";
+      if (e.cancelable) e.preventDefault();
+    }
+
+    function soltarElemento() {
+      arrastrando = false;
+      document.removeEventListener("mousemove", moverElemento);
+      document.removeEventListener("touchmove", moverElemento);
+      document.removeEventListener("mouseup", soltarElemento);
+      document.removeEventListener("touchend", soltarElemento);
+    }
+
+    dragTarget.addEventListener("mousedown", empezarArrastre);
+    dragTarget.addEventListener("touchstart", empezarArrastre, { passive: true });
+
+    boxCamara.addEventListener("mousedown", function (e) {
+      if (modoCircular && !e.target.closest("button") && !e.target.closest(".cam-resizer")) {
+        empezarArrastre(e);
+      }
+    });
+
+    dragTarget.addEventListener("dblclick", function () {
+      boxCamara.style.left = "auto";
+      boxCamara.style.top = "auto";
+      boxCamara.style.bottom = "28px";
+      boxCamara.style.right = "28px";
+    });
+
+    // -------------------------------------------------------------
+    // 5. REDIMENSIONAMIENTO INTERACTIVO POR ESQUINAS DE LA CÁMARA
+    // -------------------------------------------------------------
+    let redimensionando = false;
+    let esquinaActiva = null;
+    let rStartX = 0;
+    let rStartLeft = 0, rStartTop = 0;
+    let rStartWidth = 0, rStartHeight = 0;
+    let rAspectRatio = 1.487;
+
+    const resizers = document.querySelectorAll(".cam-resizer");
+
+    function empezarRedimension(e) {
+      e.stopPropagation();
+      e.preventDefault();
+
+      const resizerEl = e.target.closest(".cam-resizer");
+      if (!resizerEl) return;
+
+      redimensionando = true;
+      esquinaActiva = resizerEl.getAttribute("data-corner");
+
+      rStartX = e.clientX || (e.touches && e.touches[0].clientX);
+
+      const rect = asegurarCoordenadasAbsolutas();
+      rStartLeft = rect.left;
+      rStartTop = rect.top;
+      rStartWidth = rect.width;
+      rStartHeight = rect.height;
+      rAspectRatio = modoCircular ? 1 : (rStartWidth / rStartHeight);
+
+      document.body.style.userSelect = "none";
+      document.addEventListener("mousemove", ejecutarRedimension);
+      document.addEventListener("touchmove", ejecutarRedimension, { passive: false });
+      document.addEventListener("mouseup", soltarRedimension);
+      document.addEventListener("touchend", soltarRedimension);
+    }
+
+    function ejecutarRedimension(e) {
+      if (!redimensionando) return;
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+
+      let deltaX = clientX - rStartX;
+      let newWidth = rStartWidth;
+      let newHeight = rStartHeight;
+      let newLeft = rStartLeft;
+      let newTop = rStartTop;
+
+      const MIN_WIDTH = modoCircular ? 140 : 180;
+      const MAX_WIDTH = Math.min(750, window.innerWidth - 40);
+
+      if (esquinaActiva === "br") {
+        newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, rStartWidth + deltaX));
+        newHeight = Math.round(newWidth / rAspectRatio);
+      } else if (esquinaActiva === "bl") {
+        deltaX = rStartX - clientX;
+        newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, rStartWidth + deltaX));
+        newHeight = Math.round(newWidth / rAspectRatio);
+        newLeft = (rStartLeft + rStartWidth) - newWidth;
+      } else if (esquinaActiva === "tr") {
+        newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, rStartWidth + deltaX));
+        newHeight = Math.round(newWidth / rAspectRatio);
+        newTop = (rStartTop + rStartHeight) - newHeight;
+      } else if (esquinaActiva === "tl") {
+        deltaX = rStartX - clientX;
+        newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, rStartWidth + deltaX));
+        newHeight = Math.round(newWidth / rAspectRatio);
+        newLeft = (rStartLeft + rStartWidth) - newWidth;
+        newTop = (rStartTop + rStartHeight) - newHeight;
+      }
+
+      if (newLeft >= 10 && (newLeft + newWidth) <= window.innerWidth - 10) {
+        boxCamara.style.left = newLeft + "px";
+        boxCamara.style.width = newWidth + "px";
+      }
+      if (newTop >= 10 && (newTop + newHeight) <= window.innerHeight - 10) {
+        boxCamara.style.top = newTop + "px";
+        boxCamara.style.height = newHeight + "px";
+      }
+
+      if (e.cancelable) e.preventDefault();
+    }
+
+    function soltarRedimension() {
+      redimensionando = false;
+      document.body.style.userSelect = "";
+      document.removeEventListener("mousemove", ejecutarRedimension);
+      document.removeEventListener("touchmove", ejecutarRedimension);
+      document.removeEventListener("mouseup", soltarRedimension);
+      document.removeEventListener("touchend", soltarRedimension);
+    }
+
+    resizers.forEach(r => {
+      r.addEventListener("mousedown", empezarRedimension);
+      r.addEventListener("touchstart", empezarRedimension, { passive: false });
+
+      r.addEventListener("dblclick", function (e) {
+        e.stopPropagation();
+        if (modoCircular) {
+          boxCamara.style.width = "200px";
+          boxCamara.style.height = "200px";
+        } else {
+          boxCamara.style.width = "290px";
+          boxCamara.style.height = "195px";
+        }
+        mantenerCamaraEnLimites();
+      });
+    });
+
+    function ajustarTamanio(delta) {
+      asegurarCoordenadasAbsolutas();
+      const currentWidth = boxCamara.offsetWidth;
+      const targetWidth = Math.max(160, Math.min(750, currentWidth + delta));
+      const ratio = modoCircular ? 1 : (290 / 195);
+      boxCamara.style.width = targetWidth + "px";
+      boxCamara.style.height = Math.round(targetWidth / ratio) + "px";
+      mantenerCamaraEnLimites();
+    }
+
+    function manejarAtajosTeclado(ev) {
+      if (ev.target && (ev.target.tagName === "INPUT" || ev.target.tagName === "TEXTAREA" || ev.target.tagName === "SELECT")) return;
+      const tecla = (ev.key || "").toLowerCase();
+
+      if (tecla === "t") {
+        toggleCronometro();
+      } else if (tecla === "y") {
+        resetCronometro();
+      } else if (tecla === "c") {
+        toggleVisibilidadCamara();
+      } else if (tecla === "m") {
+        toggleEspejo();
+      } else if (tecla === "o") {
+        toggleForma();
+      } else if (tecla === "+" || tecla === "=") {
+        ajustarTamanio(30);
+      } else if (tecla === "-" || tecla === "_") {
+        ajustarTamanio(-30);
+      }
+    }
+
+    document.addEventListener("keydown", manejarAtajosTeclado);
+
+  })();
+</script>
